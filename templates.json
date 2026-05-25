@@ -1,0 +1,890 @@
+{
+  "metadata": {
+    "version": "2.1",
+    "description": "CodeForge DSI Templates — Enchainements Sysadmin · DevOps · MLOps",
+    "created": "2026-05-25",
+    "author": "DSI — INGEN Systems",
+    "usage": "Chaque template est un objet .cfproj complet. Copier le bloc 'canvas' dans un projet CodeForge, ou ouvrir directement comme .cfproj.",
+    "kata_philosophy": "Comme au judo : chaque fonction est un kata, chaque template est un enchainement. C'est la combinaison qui fait la victoire."
+  },
+  "templates": [
+    {
+      "id": "tpl_001",
+      "name": "ONBOARDING — Intégration complète nouvel employé",
+      "description": "Crée le compte AD, applique les groupes métier, envoie l'email de bienvenue avec mot de passe temporaire, journalise l'opération. Enchainement : vars → New-ADUserDSI → Send-AlertMail → Write-SysLog",
+      "famille": "ActiveDirectory",
+      "complexity": "★★★☆☆",
+      "functions_used": ["New-ADUserDSI", "Send-AlertMail", "Write-SysLog"],
+      "variables_used": ["DefaultOUUsers", "DomainFQDN", "SMTPServer"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "Onboarding_NouvelEmploye" },
+        "canvas": {
+          "blocks": [
+            {
+              "block_id": "ob_v01", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 60 },
+              "data": { "id": "var_010", "type": "variable", "name": "DomainFQDN", "language": "PowerShell", "famille": "ActiveDirectory", "datatype": "string", "default_value": "\"corp.local\"", "description": "Nom de domaine FQDN", "scope": "global", "tags": ["ad","domain"] }
+            },
+            {
+              "block_id": "ob_v02", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 160 },
+              "data": { "id": "var_012", "type": "variable", "name": "DefaultOUUsers", "language": "PowerShell", "famille": "ActiveDirectory", "datatype": "string", "default_value": "\"OU=Utilisateurs,DC=corp,DC=local\"", "description": "OU par défaut utilisateurs", "scope": "global", "tags": ["ad","ou"] }
+            },
+            {
+              "block_id": "ob_v03", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 260 },
+              "data": { "id": "var_015", "type": "variable", "name": "SMTPServer", "language": "PowerShell", "famille": "Network", "datatype": "string", "default_value": "\"smtp.corp.local\"", "description": "Serveur SMTP interne", "scope": "global", "tags": ["smtp","mail"] }
+            },
+            {
+              "block_id": "ob_f01", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 380, "y": 80 },
+              "data": {
+                "id": "fn_200", "type": "function", "name": "New-ADUserDSI", "language": "PowerShell", "famille": "ActiveDirectory",
+                "description": "Crée un compte utilisateur AD avec conventions DSI",
+                "parameters": [
+                  { "name": "GivenName",    "datatype": "string",   "required": true  },
+                  { "name": "Surname",      "datatype": "string",   "required": true  },
+                  { "name": "Department",   "datatype": "string",   "required": true  },
+                  { "name": "OU",           "datatype": "string",   "required": false, "default": "$DefaultOUUsers" },
+                  { "name": "BaseGroups",   "datatype": "string[]", "required": false, "default": "@('GRP_Utilisateurs')" },
+                  { "name": "TempPassword", "datatype": "string",   "required": false, "default": "\"P@ss_Temp2025!\"" }
+                ],
+                "returns": { "datatype": "ADUser", "description": "Objet ADUser créé" },
+                "tags": ["ad","users","create"]
+              }
+            },
+            {
+              "block_id": "ob_f02", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 720, "y": 80 },
+              "data": {
+                "id": "fn_101", "type": "function", "name": "Send-AlertMail", "language": "PowerShell", "famille": "Logging",
+                "description": "Envoie un email d'alerte via SMTP interne DSI",
+                "parameters": [
+                  { "name": "To",      "datatype": "string", "required": true  },
+                  { "name": "Subject", "datatype": "string", "required": true  },
+                  { "name": "Body",    "datatype": "string", "required": true  },
+                  { "name": "From",    "datatype": "string", "required": false, "default": "noreply@corp.local" }
+                ],
+                "returns": { "datatype": "bool", "description": "Succès envoi" },
+                "tags": ["mail","alert"]
+              }
+            },
+            {
+              "block_id": "ob_f03", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1060, "y": 80 },
+              "data": {
+                "id": "fn_100", "type": "function", "name": "Write-SysLog", "language": "PowerShell", "famille": "Logging",
+                "description": "Journalise un message horodaté",
+                "parameters": [
+                  { "name": "Message", "datatype": "string", "required": true  },
+                  { "name": "Level",   "datatype": "string", "required": false, "default": "INFO" },
+                  { "name": "LogFile", "datatype": "string", "required": false, "default": "$LogFilePath" }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["logging"]
+              }
+            }
+          ],
+          "connections": [
+            { "src_block": "ob_v01", "src_port": "DomainFQDN",    "tgt_block": "ob_f01", "tgt_port": "GivenName"    },
+            { "src_block": "ob_v02", "src_port": "DefaultOUUsers", "tgt_block": "ob_f01", "tgt_port": "OU"           },
+            { "src_block": "ob_f01", "src_port": "flow_out",       "tgt_block": "ob_f02", "tgt_port": "flow_in"      },
+            { "src_block": "ob_f01", "src_port": "return",         "tgt_block": "ob_f02", "tgt_port": "Body"         },
+            { "src_block": "ob_f02", "src_port": "flow_out",       "tgt_block": "ob_f03", "tgt_port": "flow_in"      }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_002",
+      "name": "OFFBOARDING — Départ employé sécurisé",
+      "description": "Désactive le compte AD, révoque les groupes, déplace en archive, audite les admins locaux résiduels, exporte rapport CSV. Enchainement : Disable-ADUserDSI → Get-LocalAdmins → Export-AuditReport → Write-SysLog",
+      "famille": "ActiveDirectory",
+      "complexity": "★★★★☆",
+      "functions_used": ["Disable-ADUserDSI", "Get-LocalAdmins", "Export-AuditReport", "Write-SysLog"],
+      "variables_used": ["DefaultOUUsers", "LogFilePath"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "Offboarding_DepartEmploye" },
+        "canvas": {
+          "blocks": [
+            {
+              "block_id": "off_v01", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 60 },
+              "data": { "id": "var_016", "type": "variable", "name": "LogFilePath", "language": "PowerShell", "famille": "Logging", "datatype": "string", "default_value": "\"C:\\\\Logs\\\\SysAdmin\\\\$(Get-Date -f yyyyMMdd).log\"", "description": "Fichier log journalier", "scope": "global", "tags": ["logging"] }
+            },
+            {
+              "block_id": "off_f01", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 340, "y": 60 },
+              "data": {
+                "id": "fn_201", "type": "function", "name": "Disable-ADUserDSI", "language": "PowerShell", "famille": "ActiveDirectory",
+                "description": "Désactive un compte AD, révoque ses groupes, déplace en archive",
+                "parameters": [
+                  { "name": "SamAccountName", "datatype": "string", "required": true  },
+                  { "name": "Reason",          "datatype": "string", "required": true  },
+                  { "name": "ArchiveOU",       "datatype": "string", "required": false, "default": "\"OU=Archives,DC=corp,DC=local\"" }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["ad","users","disable","offboarding"]
+              }
+            },
+            {
+              "block_id": "off_f02", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 680, "y": 60 },
+              "data": {
+                "id": "fn_1101", "type": "function", "name": "Get-LocalAdmins", "language": "PowerShell", "famille": "LocalAccounts",
+                "description": "Audite les membres du groupe Administrateurs local sur une liste de postes",
+                "parameters": [
+                  { "name": "ComputerNames", "datatype": "string[]", "required": true }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Admins locaux par poste" },
+                "tags": ["audit","local","admin","security"]
+              }
+            },
+            {
+              "block_id": "off_f03", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1020, "y": 60 },
+              "data": {
+                "id": "fn_1300", "type": "function", "name": "Export-AuditReport", "language": "PowerShell", "famille": "Reporting",
+                "description": "Exporte un rapport d'audit DSI en CSV/HTML",
+                "parameters": [
+                  { "name": "Data",      "datatype": "PSObject[]", "required": true  },
+                  { "name": "Title",     "datatype": "string",     "required": true  },
+                  { "name": "OutputDir", "datatype": "string",     "required": false, "default": "\"C:\\\\Reports\"" },
+                  { "name": "Format",    "datatype": "string[]",   "required": false, "default": "@('CSV','HTML')" }
+                ],
+                "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+                "tags": ["reporting","export","csv","html"]
+              }
+            },
+            {
+              "block_id": "off_f04", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1360, "y": 60 },
+              "data": {
+                "id": "fn_100", "type": "function", "name": "Write-SysLog", "language": "PowerShell", "famille": "Logging",
+                "description": "Journalise un message horodaté",
+                "parameters": [
+                  { "name": "Message", "datatype": "string", "required": true  },
+                  { "name": "Level",   "datatype": "string", "required": false, "default": "INFO" }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["logging"]
+              }
+            }
+          ],
+          "connections": [
+            { "src_block": "off_v01", "src_port": "LogFilePath",  "tgt_block": "off_f04", "tgt_port": "LogFile"      },
+            { "src_block": "off_f01", "src_port": "flow_out",     "tgt_block": "off_f02", "tgt_port": "flow_in"      },
+            { "src_block": "off_f02", "src_port": "flow_out",     "tgt_block": "off_f03", "tgt_port": "flow_in"      },
+            { "src_block": "off_f02", "src_port": "return",       "tgt_block": "off_f03", "tgt_port": "Data"         },
+            { "src_block": "off_f03", "src_port": "flow_out",     "tgt_block": "off_f04", "tgt_port": "flow_in"      }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_003",
+      "name": "AUDIT SÉCURITÉ — Rapport de conformité parc complet",
+      "description": "Collecte inventaire, vérifie baseline sécurité, audite comptes locaux, répertorie ports ouverts, exporte rapport HTML DSI. Enchainement : Get-ADComputersList → Invoke-SecurityBaseline → Get-LocalAdmins → Get-OpenPorts → Export-AuditReport",
+      "famille": "Security",
+      "complexity": "★★★★★",
+      "functions_used": ["Get-ADComputersList", "Invoke-SecurityBaseline", "Get-LocalAdmins", "Get-OpenPorts", "Export-AuditReport"],
+      "variables_used": ["DefaultOUComputers", "DomainController"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "AuditSecurite_Parc" },
+        "canvas": {
+          "blocks": [
+            {
+              "block_id": "sec_v01", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 60 },
+              "data": { "id": "var_013", "type": "variable", "name": "DefaultOUComputers", "language": "PowerShell", "famille": "ActiveDirectory", "datatype": "string", "default_value": "\"OU=Postes,DC=corp,DC=local\"", "description": "OU postes", "scope": "global", "tags": ["ad","ou","computers"] }
+            },
+            {
+              "block_id": "sec_f01", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 340, "y": 40 },
+              "data": {
+                "id": "fn_900", "type": "function", "name": "Get-ADComputersList", "language": "PowerShell", "famille": "ActiveDirectory",
+                "description": "Retourne la liste des ordinateurs AD d'une OU",
+                "parameters": [
+                  { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUComputers" },
+                  { "name": "PingCheck",  "datatype": "switch", "required": false, "default": "false"              },
+                  { "name": "OSFilter",   "datatype": "string", "required": false, "default": "\"*\""              }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Liste des ordinateurs" },
+                "tags": ["ad","computers","inventory"]
+              }
+            },
+            {
+              "block_id": "sec_ctrl01", "block_type": "control", "is_group": false, "children_ids": [],
+              "pos": { "x": 680, "y": 40 },
+              "data": { "structure": "foreach", "description": "Pour chaque poste AD trouvé" }
+            },
+            {
+              "block_id": "sec_f02", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 900, "y": 40 },
+              "data": {
+                "id": "fn_802", "type": "function", "name": "Invoke-SecurityBaseline", "language": "PowerShell", "famille": "Security",
+                "description": "Vérifie la conformité sécurité DSI d'un poste",
+                "parameters": [
+                  { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" }
+                ],
+                "returns": { "datatype": "PSObject", "description": "Rapport conformité" },
+                "tags": ["security","baseline","compliance"]
+              }
+            },
+            {
+              "block_id": "sec_f03", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 900, "y": 220 },
+              "data": {
+                "id": "fn_1101", "type": "function", "name": "Get-LocalAdmins", "language": "PowerShell", "famille": "LocalAccounts",
+                "description": "Audite les admins locaux sur les postes",
+                "parameters": [
+                  { "name": "ComputerNames", "datatype": "string[]", "required": true }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Admins locaux par poste" },
+                "tags": ["audit","admin","security"]
+              }
+            },
+            {
+              "block_id": "sec_f04", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 900, "y": 400 },
+              "data": {
+                "id": "fn_502", "type": "function", "name": "Get-OpenPorts", "language": "PowerShell", "famille": "Network",
+                "description": "Liste les ports TCP/UDP en écoute avec processus",
+                "parameters": [
+                  { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+                  { "name": "Protocol",     "datatype": "string", "required": false, "default": "\"TCP\""           }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Ports ouverts" },
+                "tags": ["network","security","ports"]
+              }
+            },
+            {
+              "block_id": "sec_f05", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1260, "y": 200 },
+              "data": {
+                "id": "fn_1300", "type": "function", "name": "Export-AuditReport", "language": "PowerShell", "famille": "Reporting",
+                "description": "Exporte rapport d'audit DSI en CSV/HTML",
+                "parameters": [
+                  { "name": "Data",      "datatype": "PSObject[]", "required": true  },
+                  { "name": "Title",     "datatype": "string",     "required": true  },
+                  { "name": "OutputDir", "datatype": "string",     "required": false, "default": "\"C:\\\\Reports\"" },
+                  { "name": "Format",    "datatype": "string[]",   "required": false, "default": "@('CSV','HTML')" }
+                ],
+                "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+                "tags": ["reporting","export"]
+              }
+            }
+          ],
+          "connections": [
+            { "src_block": "sec_v01",   "src_port": "DefaultOUComputers", "tgt_block": "sec_f01",   "tgt_port": "SearchBase"     },
+            { "src_block": "sec_f01",   "src_port": "flow_out",           "tgt_block": "sec_ctrl01", "tgt_port": "flow_in"        },
+            { "src_block": "sec_f01",   "src_port": "return",             "tgt_block": "sec_ctrl01", "tgt_port": "collection"     },
+            { "src_block": "sec_ctrl01","src_port": "flow_out",           "tgt_block": "sec_f02",   "tgt_port": "flow_in"        },
+            { "src_block": "sec_f02",   "src_port": "flow_out",           "tgt_block": "sec_f03",   "tgt_port": "flow_in"        },
+            { "src_block": "sec_f03",   "src_port": "flow_out",           "tgt_block": "sec_f04",   "tgt_port": "flow_in"        },
+            { "src_block": "sec_f02",   "src_port": "return",             "tgt_block": "sec_f05",   "tgt_port": "Data"           },
+            { "src_block": "sec_f04",   "src_port": "flow_out",           "tgt_block": "sec_f05",   "tgt_port": "flow_in"        }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_004",
+      "name": "PATCH TUESDAY — Déploiement MAJ mensuel avec rapport",
+      "description": "Interroge les MAJ en attente sur le parc, installe avec exclusions DSI, vérifie les services critiques post-MAJ, envoie rapport mail DSI. Enchainement : Get-PendingUpdates → Install-WindowsUpdates → Get-ServiceHealth → Send-AlertMail → Export-AuditReport",
+      "famille": "Updates",
+      "complexity": "★★★★★",
+      "functions_used": ["Get-PendingUpdates", "Install-WindowsUpdates", "Get-ServiceHealth", "Send-AlertMail", "Export-AuditReport"],
+      "variables_used": ["WsusServer", "SMTPServer", "LogFilePath"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "PatchTuesday_Deploiement" },
+        "canvas": {
+          "blocks": [
+            {
+              "block_id": "pt_v01", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 40 },
+              "data": { "id": "var_017", "type": "variable", "name": "WsusServer", "language": "PowerShell", "famille": "Updates", "datatype": "string", "default_value": "\"wsus.corp.local\"", "description": "Serveur WSUS", "scope": "global", "tags": ["wsus","updates"] }
+            },
+            {
+              "block_id": "pt_v02", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 140 },
+              "data": { "id": "var_015", "type": "variable", "name": "SMTPServer", "language": "PowerShell", "famille": "Network", "datatype": "string", "default_value": "\"smtp.corp.local\"", "description": "SMTP interne", "scope": "global", "tags": ["smtp","mail"] }
+            },
+            {
+              "block_id": "pt_f01", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 360, "y": 40 },
+              "data": {
+                "id": "fn_401", "type": "function", "name": "Get-PendingUpdates", "language": "PowerShell", "famille": "Updates",
+                "description": "Liste les MAJ Windows en attente sur un ou plusieurs postes",
+                "parameters": [
+                  { "name": "ComputerNames", "datatype": "string[]", "required": false, "default": "@($env:COMPUTERNAME)" }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "MAJ en attente par machine" },
+                "tags": ["updates","audit","wsus"]
+              }
+            },
+            {
+              "block_id": "pt_ctrl01", "block_type": "control", "is_group": false, "children_ids": [],
+              "pos": { "x": 700, "y": 40 },
+              "data": { "structure": "if", "description": "Si des MAJ sont disponibles" }
+            },
+            {
+              "block_id": "pt_f02", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 950, "y": 40 },
+              "data": {
+                "id": "fn_400", "type": "function", "name": "Install-WindowsUpdates", "language": "PowerShell", "famille": "Updates",
+                "description": "Lance l'installation des MAJ Windows disponibles via WSUS",
+                "parameters": [
+                  { "name": "AcceptAll",   "datatype": "switch",   "required": false, "default": "false" },
+                  { "name": "AutoReboot",  "datatype": "switch",   "required": false, "default": "false" },
+                  { "name": "ExcludeKBs", "datatype": "string[]", "required": false, "default": "@()"   }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "MAJ installées" },
+                "tags": ["updates","wsus","windows"]
+              }
+            },
+            {
+              "block_id": "pt_f03", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1290, "y": 40 },
+              "data": {
+                "id": "fn_701", "type": "function", "name": "Get-ServiceHealth", "language": "PowerShell", "famille": "Services",
+                "description": "Vérifie l'état des services critiques post-MAJ",
+                "parameters": [
+                  { "name": "CriticalServices", "datatype": "string[]", "required": true                              },
+                  { "name": "ComputerName",      "datatype": "string",   "required": false, "default": "$env:COMPUTERNAME" },
+                  { "name": "AlertEmail",        "datatype": "string",   "required": false, "default": "\"\""              }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "État des services" },
+                "tags": ["services","monitoring","alert"]
+              }
+            },
+            {
+              "block_id": "pt_f04", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1290, "y": 260 },
+              "data": {
+                "id": "fn_1300", "type": "function", "name": "Export-AuditReport", "language": "PowerShell", "famille": "Reporting",
+                "description": "Exporte rapport MAJ en CSV/HTML",
+                "parameters": [
+                  { "name": "Data",      "datatype": "PSObject[]", "required": true  },
+                  { "name": "Title",     "datatype": "string",     "required": true  },
+                  { "name": "OutputDir", "datatype": "string",     "required": false, "default": "\"C:\\\\Reports\"" },
+                  { "name": "Format",    "datatype": "string[]",   "required": false, "default": "@('CSV','HTML')" }
+                ],
+                "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+                "tags": ["reporting","export"]
+              }
+            },
+            {
+              "block_id": "pt_f05", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1630, "y": 150 },
+              "data": {
+                "id": "fn_101", "type": "function", "name": "Send-AlertMail", "language": "PowerShell", "famille": "Logging",
+                "description": "Envoie le rapport mail DSI",
+                "parameters": [
+                  { "name": "To",      "datatype": "string", "required": true  },
+                  { "name": "Subject", "datatype": "string", "required": true  },
+                  { "name": "Body",    "datatype": "string", "required": true  },
+                  { "name": "From",    "datatype": "string", "required": false, "default": "noreply@corp.local" }
+                ],
+                "returns": { "datatype": "bool", "description": "Succès envoi" },
+                "tags": ["mail","alert"]
+              }
+            }
+          ],
+          "connections": [
+            { "src_block": "pt_f01",   "src_port": "flow_out",  "tgt_block": "pt_ctrl01", "tgt_port": "flow_in"   },
+            { "src_block": "pt_f01",   "src_port": "return",    "tgt_block": "pt_ctrl01", "tgt_port": "condition" },
+            { "src_block": "pt_ctrl01","src_port": "flow_true", "tgt_block": "pt_f02",    "tgt_port": "flow_in"   },
+            { "src_block": "pt_f02",   "src_port": "flow_out",  "tgt_block": "pt_f03",    "tgt_port": "flow_in"   },
+            { "src_block": "pt_f02",   "src_port": "return",    "tgt_block": "pt_f04",    "tgt_port": "Data"      },
+            { "src_block": "pt_f03",   "src_port": "flow_out",  "tgt_block": "pt_f04",    "tgt_port": "flow_in"   },
+            { "src_block": "pt_f04",   "src_port": "flow_out",  "tgt_block": "pt_f05",    "tgt_port": "flow_in"   },
+            { "src_block": "pt_f04",   "src_port": "return",    "tgt_block": "pt_f05",    "tgt_port": "Body"      }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_005",
+      "name": "LOCKOUT RESPONSE — Réponse incident verrouillage",
+      "description": "Détecte les comptes AD verrouillés, identifie l'origine (EventLog 4740), déverrouille sélectivement, réinitialise le MDP si > 3 lockouts, notifie le manager. Enchainement : Get-LockedADAccounts → Get-SecurityEvents → if → Reset-ADUserPassword → Send-AlertMail → Write-SysLog",
+      "famille": "Security",
+      "complexity": "★★★★☆",
+      "functions_used": ["Get-LockedADAccounts", "Get-SecurityEvents", "Reset-ADUserPassword", "Send-AlertMail", "Write-SysLog"],
+      "variables_used": ["DomainController", "CriticalEventIDs", "SMTPServer"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "LockoutResponse_Incident" },
+        "canvas": {
+          "blocks": [
+            {
+              "block_id": "lo_v01", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 60 },
+              "data": { "id": "var_011", "type": "variable", "name": "DomainController", "language": "PowerShell", "famille": "ActiveDirectory", "datatype": "string", "default_value": "\"DC01.corp.local\"", "description": "DC principal", "scope": "global", "tags": ["ad","dc"] }
+            },
+            {
+              "block_id": "lo_v02", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 160 },
+              "data": { "id": "var_020", "type": "variable", "name": "CriticalEventIDs", "language": "PowerShell", "famille": "Monitoring", "datatype": "int[]", "default_value": "@(4625,4740,4768,4769,7036,1074,6008)", "description": "IDs EventLog critiques", "scope": "global", "tags": ["eventlog","monitoring"] }
+            },
+            {
+              "block_id": "lo_f01", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 360, "y": 80 },
+              "data": {
+                "id": "fn_801", "type": "function", "name": "Get-LockedADAccounts", "language": "PowerShell", "famille": "Security",
+                "description": "Liste les comptes AD verrouillés avec origine du verrouillage",
+                "parameters": [
+                  { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUUsers" }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Comptes verrouillés" },
+                "tags": ["security","ad","lockout"]
+              }
+            },
+            {
+              "block_id": "lo_f02", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 700, "y": 80 },
+              "data": {
+                "id": "fn_800", "type": "function", "name": "Get-SecurityEvents", "language": "PowerShell", "famille": "Security",
+                "description": "Extrait les événements de sécurité Windows (4625/4740)",
+                "parameters": [
+                  { "name": "ComputerName", "datatype": "string", "required": false, "default": "$DomainController" },
+                  { "name": "EventIDs",     "datatype": "int[]",  "required": false, "default": "$CriticalEventIDs" },
+                  { "name": "HoursBack",    "datatype": "int",    "required": false, "default": "24"                }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Événements collectés" },
+                "tags": ["security","eventlog","audit"]
+              }
+            },
+            {
+              "block_id": "lo_ctrl01", "block_type": "control", "is_group": false, "children_ids": [],
+              "pos": { "x": 1040, "y": 80 },
+              "data": { "structure": "if", "description": "Si verrouillage multiple (> 3 occurrences) → réinitialiser MDP" }
+            },
+            {
+              "block_id": "lo_f03", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1280, "y": 40 },
+              "data": {
+                "id": "fn_202", "type": "function", "name": "Reset-ADUserPassword", "language": "PowerShell", "famille": "ActiveDirectory",
+                "description": "Réinitialise le MDP AD avec forçage changement",
+                "parameters": [
+                  { "name": "SamAccountName", "datatype": "string", "required": true },
+                  { "name": "NewPassword",    "datatype": "string", "required": true }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["ad","password","security"]
+              }
+            },
+            {
+              "block_id": "lo_f04", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1280, "y": 240 },
+              "data": {
+                "id": "fn_101", "type": "function", "name": "Send-AlertMail", "language": "PowerShell", "famille": "Logging",
+                "description": "Notifie le manager et la DSI",
+                "parameters": [
+                  { "name": "To",      "datatype": "string", "required": true  },
+                  { "name": "Subject", "datatype": "string", "required": true  },
+                  { "name": "Body",    "datatype": "string", "required": true  }
+                ],
+                "returns": { "datatype": "bool", "description": "Succès envoi" },
+                "tags": ["mail","alert"]
+              }
+            },
+            {
+              "block_id": "lo_f05", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1600, "y": 140 },
+              "data": {
+                "id": "fn_100", "type": "function", "name": "Write-SysLog", "language": "PowerShell", "famille": "Logging",
+                "description": "Journalise l'incident lockout",
+                "parameters": [
+                  { "name": "Message", "datatype": "string", "required": true  },
+                  { "name": "Level",   "datatype": "string", "required": false, "default": "WARN" }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["logging"]
+              }
+            }
+          ],
+          "connections": [
+            { "src_block": "lo_v01",   "src_port": "DomainController", "tgt_block": "lo_f02",   "tgt_port": "ComputerName" },
+            { "src_block": "lo_v02",   "src_port": "CriticalEventIDs", "tgt_block": "lo_f02",   "tgt_port": "EventIDs"     },
+            { "src_block": "lo_f01",   "src_port": "flow_out",         "tgt_block": "lo_f02",   "tgt_port": "flow_in"      },
+            { "src_block": "lo_f02",   "src_port": "flow_out",         "tgt_block": "lo_ctrl01","tgt_port": "flow_in"      },
+            { "src_block": "lo_f02",   "src_port": "return",           "tgt_block": "lo_ctrl01","tgt_port": "condition"    },
+            { "src_block": "lo_ctrl01","src_port": "flow_true",        "tgt_block": "lo_f03",   "tgt_port": "flow_in"      },
+            { "src_block": "lo_f03",   "src_port": "flow_out",         "tgt_block": "lo_f04",   "tgt_port": "flow_in"      },
+            { "src_block": "lo_f04",   "src_port": "flow_out",         "tgt_block": "lo_f05",   "tgt_port": "flow_in"      }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_006",
+      "name": "PROVISIONING POSTE — Intégration station de travail",
+      "description": "Intègre un poste au domaine, le place dans l'OU, crée le compte admin local DSI, force les GPO, vérifie la connectivité réseau, inventorie le matériel. Enchainement : Join-DomainDSI → New-LocalAdminAccount → Apply-GPODSIBaseline → Test-NetworkDiag → Get-SystemInventory → Write-SysLog",
+      "famille": "ActiveDirectory",
+      "complexity": "★★★★★",
+      "functions_used": ["Join-DomainDSI", "New-LocalAdminAccount", "Apply-GPODSIBaseline", "Test-NetworkDiag", "Get-SystemInventory", "Write-SysLog"],
+      "variables_used": ["DefaultOUComputers", "DomainFQDN", "DomainController"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "Provisioning_PosteDeTravail" },
+        "canvas": {
+          "blocks": [
+            {
+              "block_id": "pv_v01", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 40 },
+              "data": { "id": "var_010", "type": "variable", "name": "DomainFQDN", "language": "PowerShell", "famille": "ActiveDirectory", "datatype": "string", "default_value": "\"corp.local\"", "description": "FQDN domaine", "scope": "global", "tags": ["ad","domain"] }
+            },
+            {
+              "block_id": "pv_v02", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 140 },
+              "data": { "id": "var_013", "type": "variable", "name": "DefaultOUComputers", "language": "PowerShell", "famille": "ActiveDirectory", "datatype": "string", "default_value": "\"OU=Postes,DC=corp,DC=local\"", "description": "OU postes", "scope": "global", "tags": ["ad","ou","computers"] }
+            },
+            {
+              "block_id": "pv_f01", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 360, "y": 60 },
+              "data": {
+                "id": "fn_901", "type": "function", "name": "Join-DomainDSI", "language": "PowerShell", "famille": "ActiveDirectory",
+                "description": "Intègre un poste au domaine AD DSI",
+                "parameters": [
+                  { "name": "ComputerName", "datatype": "string",      "required": true  },
+                  { "name": "TargetOU",     "datatype": "string",      "required": false, "default": "$DefaultOUComputers" },
+                  { "name": "Credential",   "datatype": "PSCredential","required": true  }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["ad","domain","computers","provisioning"]
+              }
+            },
+            {
+              "block_id": "pv_f02", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 700, "y": 60 },
+              "data": {
+                "id": "fn_1100", "type": "function", "name": "New-LocalAdminAccount", "language": "PowerShell", "famille": "LocalAccounts",
+                "description": "Crée un compte admin local DSI sur le poste",
+                "parameters": [
+                  { "name": "ComputerName",  "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+                  { "name": "Username",      "datatype": "string", "required": true  },
+                  { "name": "Password",      "datatype": "string", "required": true  },
+                  { "name": "DisableDefault","datatype": "switch", "required": false, "default": "true" }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["local","admin","security","accounts"]
+              }
+            },
+            {
+              "block_id": "pv_f03", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1040, "y": 60 },
+              "data": {
+                "id": "fn_1000", "type": "function", "name": "Apply-GPODSIBaseline", "language": "PowerShell", "famille": "GPO",
+                "description": "Force le rafraîchissement GPO sur le poste",
+                "parameters": [
+                  { "name": "ComputerNames", "datatype": "string[]", "required": true  },
+                  { "name": "LogonScripts",  "datatype": "switch",   "required": false, "default": "false" }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Résultats GPO" },
+                "tags": ["gpo","policy"]
+              }
+            },
+            {
+              "block_id": "pv_f04", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1040, "y": 260 },
+              "data": {
+                "id": "fn_500", "type": "function", "name": "Test-NetworkDiag", "language": "PowerShell", "famille": "Network",
+                "description": "Diagnostic réseau complet : ping, DNS, port",
+                "parameters": [
+                  { "name": "Target",    "datatype": "string", "required": true  },
+                  { "name": "Port",      "datatype": "int",    "required": false, "default": "443" },
+                  { "name": "DnsServer", "datatype": "string", "required": false, "default": "\"\""  }
+                ],
+                "returns": { "datatype": "PSObject", "description": "Rapport diagnostic" },
+                "tags": ["network","diagnostic","ping"]
+              }
+            },
+            {
+              "block_id": "pv_f05", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1380, "y": 160 },
+              "data": {
+                "id": "fn_600", "type": "function", "name": "Get-SystemInventory", "language": "PowerShell", "famille": "Inventory",
+                "description": "Collecte l'inventaire matériel et logiciel complet",
+                "parameters": [
+                  { "name": "ComputerName",    "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+                  { "name": "IncludeSoftware", "datatype": "switch", "required": false, "default": "true"              }
+                ],
+                "returns": { "datatype": "PSObject", "description": "Inventaire complet" },
+                "tags": ["inventory","audit","hardware"]
+              }
+            },
+            {
+              "block_id": "pv_f06", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1720, "y": 160 },
+              "data": {
+                "id": "fn_100", "type": "function", "name": "Write-SysLog", "language": "PowerShell", "famille": "Logging",
+                "description": "Journalise la fin du provisioning",
+                "parameters": [
+                  { "name": "Message", "datatype": "string", "required": true  },
+                  { "name": "Level",   "datatype": "string", "required": false, "default": "INFO" }
+                ],
+                "returns": { "datatype": "void", "description": "" },
+                "tags": ["logging"]
+              }
+            }
+          ],
+          "connections": [
+            { "src_block": "pv_v02", "src_port": "DefaultOUComputers", "tgt_block": "pv_f01", "tgt_port": "TargetOU"     },
+            { "src_block": "pv_f01", "src_port": "flow_out",           "tgt_block": "pv_f02", "tgt_port": "flow_in"      },
+            { "src_block": "pv_f02", "src_port": "flow_out",           "tgt_block": "pv_f03", "tgt_port": "flow_in"      },
+            { "src_block": "pv_f03", "src_port": "flow_out",           "tgt_block": "pv_f04", "tgt_port": "flow_in"      },
+            { "src_block": "pv_f04", "src_port": "flow_out",           "tgt_block": "pv_f05", "tgt_port": "flow_in"      },
+            { "src_block": "pv_f05", "src_port": "flow_out",           "tgt_block": "pv_f06", "tgt_port": "flow_in"      },
+            { "src_block": "pv_f05", "src_port": "return",             "tgt_block": "pv_f06", "tgt_port": "Message"      }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_007",
+      "name": "AUDIT HEBDO — Surveillance continue du parc DSI",
+      "description": "Détecte les comptes AD dormants, vérifie l'espace disque critique, contrôle les services vitaux, collecte les événements sécurité de la semaine, exporte rapport HTML consolidé. Le tableau de bord hebdo DSI en un enchainement.",
+      "famille": "Monitoring",
+      "complexity": "★★★★★",
+      "functions_used": ["Get-StaleADAccounts", "Get-DiskHealth", "Get-ServiceHealth", "Get-SecurityEvents", "Export-AuditReport", "Send-AlertMail"],
+      "variables_used": ["DefaultOUUsers", "CriticalEventIDs", "DomainController", "SMTPServer"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "AuditHebdomadaire_DSI" },
+        "canvas": {
+          "blocks": [
+            {
+              "block_id": "ah_v01", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 40 },
+              "data": { "id": "var_012", "type": "variable", "name": "DefaultOUUsers", "language": "PowerShell", "famille": "ActiveDirectory", "datatype": "string", "default_value": "\"OU=Utilisateurs,DC=corp,DC=local\"", "description": "OU utilisateurs", "scope": "global", "tags": ["ad","ou"] }
+            },
+            {
+              "block_id": "ah_v02", "block_type": "variable", "is_group": false, "children_ids": [],
+              "pos": { "x": 40, "y": 140 },
+              "data": { "id": "var_020", "type": "variable", "name": "CriticalEventIDs", "language": "PowerShell", "famille": "Monitoring", "datatype": "int[]", "default_value": "@(4625,4740,4768,4769,7036,1074,6008)", "description": "EventIDs critiques", "scope": "global", "tags": ["eventlog"] }
+            },
+            {
+              "block_id": "ah_f01", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 360, "y": 40 },
+              "data": {
+                "id": "fn_205", "type": "function", "name": "Get-StaleADAccounts", "language": "PowerShell", "famille": "ActiveDirectory",
+                "description": "Identifie les comptes AD inactifs depuis > N jours",
+                "parameters": [
+                  { "name": "InactiveDays", "datatype": "int",    "required": false, "default": "90"               },
+                  { "name": "SearchBase",   "datatype": "string", "required": false, "default": "$DefaultOUUsers"  }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Comptes inactifs" },
+                "tags": ["ad","audit","security","cleanup"]
+              }
+            },
+            {
+              "block_id": "ah_f02", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 360, "y": 220 },
+              "data": {
+                "id": "fn_601", "type": "function", "name": "Get-DiskHealth", "language": "PowerShell", "famille": "Inventory",
+                "description": "Vérifie l'espace disponible sur les volumes avec seuil d'alerte",
+                "parameters": [
+                  { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+                  { "name": "ThresholdPct", "datatype": "int",    "required": false, "default": "15"                }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "État des volumes" },
+                "tags": ["disk","health","monitoring"]
+              }
+            },
+            {
+              "block_id": "ah_f03", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 360, "y": 400 },
+              "data": {
+                "id": "fn_701", "type": "function", "name": "Get-ServiceHealth", "language": "PowerShell", "famille": "Services",
+                "description": "Vérifie l'état des services critiques",
+                "parameters": [
+                  { "name": "CriticalServices", "datatype": "string[]", "required": true                              },
+                  { "name": "ComputerName",      "datatype": "string",   "required": false, "default": "$env:COMPUTERNAME" },
+                  { "name": "AlertEmail",        "datatype": "string",   "required": false, "default": "\"\""              }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "État services" },
+                "tags": ["services","monitoring"]
+              }
+            },
+            {
+              "block_id": "ah_f04", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 360, "y": 580 },
+              "data": {
+                "id": "fn_800", "type": "function", "name": "Get-SecurityEvents", "language": "PowerShell", "famille": "Security",
+                "description": "Collecte les événements sécurité de la semaine",
+                "parameters": [
+                  { "name": "ComputerName", "datatype": "string", "required": false, "default": "$DomainController" },
+                  { "name": "EventIDs",     "datatype": "int[]",  "required": false, "default": "$CriticalEventIDs" },
+                  { "name": "HoursBack",    "datatype": "int",    "required": false, "default": "168"               }
+                ],
+                "returns": { "datatype": "PSObject[]", "description": "Événements collectés" },
+                "tags": ["security","eventlog","audit"]
+              }
+            },
+            {
+              "block_id": "ah_f05", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 840, "y": 300 },
+              "data": {
+                "id": "fn_1300", "type": "function", "name": "Export-AuditReport", "language": "PowerShell", "famille": "Reporting",
+                "description": "Exporte le rapport hebdo consolidé en HTML",
+                "parameters": [
+                  { "name": "Data",      "datatype": "PSObject[]", "required": true  },
+                  { "name": "Title",     "datatype": "string",     "required": true  },
+                  { "name": "OutputDir", "datatype": "string",     "required": false, "default": "\"C:\\\\Reports\"" },
+                  { "name": "Format",    "datatype": "string[]",   "required": false, "default": "@('HTML')" }
+                ],
+                "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+                "tags": ["reporting","export","html"]
+              }
+            },
+            {
+              "block_id": "ah_f06", "block_type": "function", "is_group": false, "children_ids": [],
+              "pos": { "x": 1180, "y": 300 },
+              "data": {
+                "id": "fn_101", "type": "function", "name": "Send-AlertMail", "language": "PowerShell", "famille": "Logging",
+                "description": "Envoie le rapport hebdo à la direction DSI",
+                "parameters": [
+                  { "name": "To",      "datatype": "string", "required": true  },
+                  { "name": "Subject", "datatype": "string", "required": true  },
+                  { "name": "Body",    "datatype": "string", "required": true  }
+                ],
+                "returns": { "datatype": "bool", "description": "Succès envoi" },
+                "tags": ["mail","alert"]
+              }
+            }
+          ],
+          "connections": [
+            { "src_block": "ah_v01", "src_port": "DefaultOUUsers",  "tgt_block": "ah_f01", "tgt_port": "SearchBase"   },
+            { "src_block": "ah_v02", "src_port": "CriticalEventIDs","tgt_block": "ah_f04", "tgt_port": "EventIDs"      },
+            { "src_block": "ah_f01", "src_port": "flow_out",        "tgt_block": "ah_f02", "tgt_port": "flow_in"       },
+            { "src_block": "ah_f02", "src_port": "flow_out",        "tgt_block": "ah_f03", "tgt_port": "flow_in"       },
+            { "src_block": "ah_f03", "src_port": "flow_out",        "tgt_block": "ah_f04", "tgt_port": "flow_in"       },
+            { "src_block": "ah_f04", "src_port": "flow_out",        "tgt_block": "ah_f05", "tgt_port": "flow_in"       },
+            { "src_block": "ah_f01", "src_port": "return",          "tgt_block": "ah_f05", "tgt_port": "Data"          },
+            { "src_block": "ah_f05", "src_port": "flow_out",        "tgt_block": "ah_f06", "tgt_port": "flow_in"       },
+            { "src_block": "ah_f05", "src_port": "return",          "tgt_block": "ah_f06", "tgt_port": "Body"          }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_008",
+      "name": "DEVOPS DEPLOYMENT — Pipeline CI/CD → Container → K8s",
+      "description": "Déclenche pipeline, build image, déploie sur Kubernetes, vérifie rollout, notifie. Enchainement : Invoke-CICDPipeline → Build-DockerImageDSI → Deploy-K8sManifestDSI → Send-AlertMail → Write-SysLog",
+      "famille": "DevOps",
+      "complexity": "★★★★☆",
+      "functions_used": ["Invoke-CICDPipeline", "Build-DockerImageDSI", "Deploy-K8sManifestDSI", "Send-AlertMail", "Write-SysLog"],
+      "variables_used": ["CICD_API_URL", "ContainerRegistry_URL", "KubeConfig_Path"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "DevOps_Deploiement_Complet" },
+        "canvas": {
+          "blocks": [
+            { "block_id": "do_f01", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 60, "y": 80 },
+              "data": { "id": "fn_1400", "type": "function", "name": "Invoke-CICDPipeline", "language": "PowerShell", "famille": "DevOps", "description": "Déclenche pipeline CI/CD", "parameters": [{ "name": "PipelineName", "datatype": "string", "required": true }], "returns": { "datatype": "PSObject", "description": "Run status" }, "tags": ["cicd"] } },
+            { "block_id": "do_f02", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 380, "y": 80 },
+              "data": { "id": "fn_1401", "type": "function", "name": "Build-DockerImageDSI", "language": "PowerShell", "famille": "DevOps", "description": "Build & push container", "parameters": [{ "name": "ImageName", "datatype": "string", "required": true }], "returns": { "datatype": "bool", "description": "Success" }, "tags": ["docker"] } },
+            { "block_id": "do_f03", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 700, "y": 80 },
+              "data": { "id": "fn_1402", "type": "function", "name": "Deploy-K8sManifestDSI", "language": "PowerShell", "famille": "DevOps", "description": "Apply K8s & rollout", "parameters": [{ "name": "ManifestPath", "datatype": "string", "required": true }], "returns": { "datatype": "string", "description": "Rollout status" }, "tags": ["k8s"] } },
+            { "block_id": "do_f04", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 1020, "y": 80 },
+              "data": { "id": "fn_101", "type": "function", "name": "Send-AlertMail", "language": "PowerShell", "famille": "Logging", "description": "Notification DSI", "parameters": [{ "name": "To", "datatype": "string", "required": true }, { "name": "Subject", "datatype": "string", "required": true }, { "name": "Body", "datatype": "string", "required": true }], "returns": { "datatype": "bool", "description": "Success" }, "tags": ["mail"] } },
+            { "block_id": "do_f05", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 1340, "y": 80 },
+              "data": { "id": "fn_100", "type": "function", "name": "Write-SysLog", "language": "PowerShell", "famille": "Logging", "description": "Journalisation", "parameters": [{ "name": "Message", "datatype": "string", "required": true }], "returns": { "datatype": "void", "description": "" }, "tags": ["logging"] } }
+          ],
+          "connections": [
+            { "src_block": "do_f01", "src_port": "flow_out", "tgt_block": "do_f02", "tgt_port": "flow_in" },
+            { "src_block": "do_f02", "src_port": "flow_out", "tgt_block": "do_f03", "tgt_port": "flow_in" },
+            { "src_block": "do_f03", "src_port": "flow_out", "tgt_block": "do_f04", "tgt_port": "flow_in" },
+            { "src_block": "do_f03", "src_port": "return", "tgt_block": "do_f04", "tgt_port": "Body" },
+            { "src_block": "do_f04", "src_port": "flow_out", "tgt_block": "do_f05", "tgt_port": "flow_in" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_009",
+      "name": "MLOPS DRIFT-RETRAIN — Surveillance & réentraînement automatique",
+      "description": "Détecte dérive modèle, conditionne réentraînement, enregistre nouvelle version, exporte rapport. Enchainement : Get-ModelDriftMetricsDSI → if → Invoke-ModelTrainingDSI → Register-MLModelDSI → Export-AuditReport",
+      "famille": "MLOps",
+      "complexity": "★★★★★",
+      "functions_used": ["Get-ModelDriftMetricsDSI", "Invoke-ModelTrainingDSI", "Register-MLModelDSI", "Export-AuditReport"],
+      "variables_used": ["ML_Registry_URI", "Model_Training_Script", "DriftThreshold"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "MLOps_Drift_AutoRetrain" },
+        "canvas": {
+          "blocks": [
+            { "block_id": "ml_f01", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 60, "y": 80 },
+              "data": { "id": "fn_1405", "type": "function", "name": "Get-ModelDriftMetricsDSI", "language": "PowerShell", "famille": "MLOps", "description": "Calcul drift PSI", "parameters": [{ "name": "EndpointUrl", "datatype": "string", "required": true }], "returns": { "datatype": "PSObject", "description": "Drift report" }, "tags": ["ml", "drift"] } },
+            { "block_id": "ml_ctrl01", "block_type": "control", "is_group": false, "children_ids": [], "pos": { "x": 380, "y": 80 },
+              "data": { "structure": "if", "description": "Si DriftDetected == true" } },
+            { "block_id": "ml_f02", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 700, "y": 80 },
+              "data": { "id": "fn_1403", "type": "function", "name": "Invoke-ModelTrainingDSI", "language": "PowerShell", "famille": "MLOps", "description": "Entraînement cluster", "parameters": [{ "name": "ScriptPath", "datatype": "string", "required": true }, { "name": "DatasetUri", "datatype": "string", "required": true }], "returns": { "datatype": "PSObject", "description": "Run status" }, "tags": ["ml", "training"] } },
+            { "block_id": "ml_f03", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 1020, "y": 80 },
+              "data": { "id": "fn_1404", "type": "function", "name": "Register-MLModelDSI", "language": "PowerShell", "famille": "MLOps", "description": "Enregistrement modèle", "parameters": [{ "name": "ModelName", "datatype": "string", "required": true }, { "name": "ModelPath", "datatype": "string", "required": true }], "returns": { "datatype": "string", "description": "ModelId" }, "tags": ["ml", "registry"] } },
+            { "block_id": "ml_f04", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 1340, "y": 80 },
+              "data": { "id": "fn_1300", "type": "function", "name": "Export-AuditReport", "language": "PowerShell", "famille": "Reporting", "description": "Rapport consolidation", "parameters": [{ "name": "Data", "datatype": "PSObject[]", "required": true }, { "name": "Title", "datatype": "string", "required": true }], "returns": { "datatype": "string[]", "description": "Files" }, "tags": ["reporting"] } }
+          ],
+          "connections": [
+            { "src_block": "ml_f01", "src_port": "flow_out", "tgt_block": "ml_ctrl01", "tgt_port": "flow_in" },
+            { "src_block": "ml_f01", "src_port": "return", "tgt_block": "ml_ctrl01", "tgt_port": "condition" },
+            { "src_block": "ml_ctrl01", "src_port": "flow_true", "tgt_block": "ml_f02", "tgt_port": "flow_in" },
+            { "src_block": "ml_f02", "src_port": "flow_out", "tgt_block": "ml_f03", "tgt_port": "flow_in" },
+            { "src_block": "ml_f02", "src_port": "return", "tgt_block": "ml_f03", "tgt_port": "ModelPath" },
+            { "src_block": "ml_f03", "src_port": "flow_out", "tgt_block": "ml_f04", "tgt_port": "flow_in" },
+            { "src_block": "ml_f03", "src_port": "return", "tgt_block": "ml_f04", "tgt_port": "Data" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tpl_010",
+      "name": "IAC PROVISIONING — Terraform → K8s → Healthcheck → Promotion",
+      "description": "Applique IaC, vérifie pods, valide réseau, promeut environnement. Enchainement : Apply-TerraformDSI → Deploy-K8sManifestDSI → Test-NetworkDiag → Promote-EnvironmentDSI → Write-SysLog",
+      "famille": "DevOps",
+      "complexity": "★★★★☆",
+      "functions_used": ["Apply-TerraformDSI", "Deploy-K8sManifestDSI", "Test-NetworkDiag", "Promote-EnvironmentDSI", "Write-SysLog"],
+      "variables_used": ["Terraform_Workspace", "KubeConfig_Path"],
+      "cfproj": {
+        "codeforge_version": "2.0",
+        "saved_at": "2026-05-25T00:00:00",
+        "output": { "language": "PowerShell", "name": "IAC_Provisionnement_Stack" },
+        "canvas": {
+          "blocks": [
+            { "block_id": "ia_f01", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 60, "y": 80 },
+              "data": { "id": "fn_1406", "type": "function", "name": "Apply-TerraformDSI", "language": "PowerShell", "famille": "DevOps", "description": "Apply IaC", "parameters": [{ "name": "Workspace", "datatype": "string", "required": true }], "returns": { "datatype": "PSObject", "description": "Plan summary" }, "tags": ["iac"] } },
+            { "block_id": "ia_f02", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 380, "y": 80 },
+              "data": { "id": "fn_1402", "type": "function", "name": "Deploy-K8sManifestDSI", "language": "PowerShell", "famille": "DevOps", "description": "Apply K8s", "parameters": [{ "name": "ManifestPath", "datatype": "string", "required": true }], "returns": { "datatype": "string", "description": "Rollout status" }, "tags": ["k8s"] } },
+            { "block_id": "ia_f03", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 700, "y": 80 },
+              "data": { "id": "fn_500", "type": "function", "name": "Test-NetworkDiag", "language": "PowerShell", "famille": "Network", "description": "Diag réseau post-deploy", "parameters": [{ "name": "Target", "datatype": "string", "required": true }], "returns": { "datatype": "PSObject", "description": "Rapport" }, "tags": ["network"] } },
+            { "block_id": "ia_f04", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 1020, "y": 80 },
+              "data": { "id": "fn_1407", "type": "function", "name": "Promote-EnvironmentDSI", "language": "PowerShell", "famille": "DevOps", "description": "Promotion env", "parameters": [{ "name": "ServiceName", "datatype": "string", "required": true }, { "name": "SourceEnv", "datatype": "string", "required": true }, { "name": "TargetEnv", "datatype": "string", "required": true }], "returns": { "datatype": "bool", "description": "Success" }, "tags": ["cicd"] } },
+            { "block_id": "ia_f05", "block_type": "function", "is_group": false, "children_ids": [], "pos": { "x": 1340, "y": 80 },
+              "data": { "id": "fn_100", "type": "function", "name": "Write-SysLog", "language": "PowerShell", "famille": "Logging", "description": "Journalisation", "parameters": [{ "name": "Message", "datatype": "string", "required": true }], "returns": { "datatype": "void", "description": "" }, "tags": ["logging"] } }
+          ],
+          "connections": [
+            { "src_block": "ia_f01", "src_port": "flow_out", "tgt_block": "ia_f02", "tgt_port": "flow_in" },
+            { "src_block": "ia_f02", "src_port": "flow_out", "tgt_block": "ia_f03", "tgt_port": "flow_in" },
+            { "src_block": "ia_f03", "src_port": "return", "tgt_block": "ia_f04", "tgt_port": "flow_in" },
+            { "src_block": "ia_f03", "src_port": "flow_out", "tgt_block": "ia_f04", "tgt_port": "flow_in" },
+            { "src_block": "ia_f04", "src_port": "flow_out", "tgt_block": "ia_f05", "tgt_port": "flow_in" }
+          ]
+        }
+      }
+    }
+  ]
+}

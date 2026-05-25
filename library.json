@@ -1,0 +1,2086 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "description": "CodeForge DSI-Validated SysAdmin Library — Windows Server & Workstation",
+    "created": "2026-05-25",
+    "author": "DSI — INGEN Systems",
+    "scope": "Active Directory · OS Windows · Réseau · Droits · Partages · MAJ · Diagnostic · Utilisateurs · Sécurité",
+    "validation_status": "APPROVED",
+    "languages": [
+      "PowerShell",
+      "CSharp"
+    ]
+  },
+  "functions": [
+    {
+      "id": "fn_100",
+      "type": "function",
+      "name": "Write-SysLog",
+      "language": "PowerShell",
+      "famille": "Logging",
+      "description": "Journalise un message horodaté dans un fichier texte avec niveau de sévérité. Crée le répertoire si absent.",
+      "parameters": [
+        {
+          "name": "Message",
+          "datatype": "string",
+          "required": true,
+          "description": "Message à journaliser"
+        },
+        {
+          "name": "Level",
+          "datatype": "string",
+          "required": false,
+          "default": "INFO",
+          "description": "INFO | WARN | ERROR | DEBUG"
+        },
+        {
+          "name": "LogFile",
+          "datatype": "string",
+          "required": false,
+          "default": "$LogFilePath",
+          "description": "Chemin du fichier log"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Write-SysLog {\n    param(\n        [string]$Message,\n        [ValidateSet('INFO','WARN','ERROR','DEBUG')]\n        [string]$Level = 'INFO',\n        [string]$LogFile = $LogFilePath\n    )\n    $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'\n    $entry = \"[$ts] [$Level] $Message\"\n    if (-not (Test-Path (Split-Path $LogFile))) {\n        New-Item -ItemType Directory -Path (Split-Path $LogFile) -Force | Out-Null\n    }\n    Add-Content -Path $LogFile -Value $entry -Encoding UTF8\n    if ($Level -eq 'ERROR') { Write-Host $entry -ForegroundColor Red }\n    elseif ($Level -eq 'WARN') { Write-Host $entry -ForegroundColor Yellow }\n    else { Write-Host $entry -ForegroundColor Cyan }\n}",
+      "tags": [
+        "logging",
+        "filesystem"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_101",
+      "type": "function",
+      "name": "Send-AlertMail",
+      "language": "PowerShell",
+      "famille": "Logging",
+      "description": "Envoie un email d'alerte via SMTP interne DSI.",
+      "parameters": [
+        {
+          "name": "To",
+          "datatype": "string",
+          "required": true,
+          "description": "Destinataire"
+        },
+        {
+          "name": "Subject",
+          "datatype": "string",
+          "required": true,
+          "description": "Objet du message"
+        },
+        {
+          "name": "Body",
+          "datatype": "string",
+          "required": true,
+          "description": "Corps du message"
+        },
+        {
+          "name": "From",
+          "datatype": "string",
+          "required": false,
+          "default": "noreply@corp.local",
+          "description": "Expéditeur"
+        }
+      ],
+      "returns": {
+        "datatype": "bool",
+        "description": "Succès de l'envoi"
+      },
+      "source": "function Send-AlertMail {\n    param(\n        [string]$To,\n        [string]$Subject,\n        [string]$Body,\n        [string]$From = 'noreply@corp.local'\n    )\n    try {\n        Send-MailMessage -SmtpServer $SMTPServer -From $From -To $To `\n            -Subject $Subject -Body $Body -Encoding UTF8 -ErrorAction Stop\n        Write-SysLog \"Mail envoyé à $To : $Subject\"\n        return $true\n    } catch {\n        Write-SysLog \"Échec envoi mail : $_\" -Level 'ERROR'\n        return $false\n    }\n}",
+      "tags": [
+        "mail",
+        "alert",
+        "logging"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1400",
+      "type": "function",
+      "name": "Invoke-CICDPipeline",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "description": "Déclenche un pipeline CI/CD via API REST (Azure DevOps / GitLab compatible DSI).",
+      "parameters": [
+        {
+          "name": "PipelineName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom ou ID du pipeline"
+        },
+        {
+          "name": "Branch",
+          "datatype": "string",
+          "required": false,
+          "default": "\"main\"",
+          "description": "Branche cible"
+        },
+        {
+          "name": "Variables",
+          "datatype": "hashtable",
+          "required": false,
+          "default": "@{}",
+          "description": "Variables de surcharge"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Statut du run {RunId, Status, Url}"
+      },
+      "source": "function Invoke-CICDPipeline {\n    param(\n        [string]$PipelineName,\n        [string]$Branch = 'main',\n        [hashtable]$Variables = @{}\n    )\n    $headers = @{ 'Authorization' = \"Bearer $CI_CD_TOKEN\"; 'Content-Type' = 'application/json' }\n    $body = @{ definitionName = $PipelineName; sourceBranch = $Branch; variables = $Variables } | ConvertTo-Json -Depth 3\n    try {\n        $run = Invoke-RestMethod -Uri \"$CICD_API_URL/pipelines/run\" -Method Post -Headers $headers -Body $body -ErrorAction Stop\n        Write-SysLog \"Pipeline déclenché : $PipelineName ($($run.runId))\"\n        return [PSCustomObject]@{ RunId=$run.runId; Status=$run.state; Url=$run.url }\n    } catch {\n        Write-SysLog \"Échec déclenchement pipeline : $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "cicd",
+        "api",
+        "automation"
+      ],
+      "throws": [
+        "HttpRequestException"
+      ]
+    },
+    {
+      "id": "fn_1401",
+      "type": "function",
+      "name": "Build-DockerImageDSI",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "description": "Build, tag et push une image Docker vers le registre privé DSI.",
+      "parameters": [
+        {
+          "name": "ImageName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom de l'image"
+        },
+        {
+          "name": "Tag",
+          "datatype": "string",
+          "required": false,
+          "default": "\"latest\"",
+          "description": "Tag de version"
+        },
+        {
+          "name": "DockerfilePath",
+          "datatype": "string",
+          "required": false,
+          "default": "\"./Dockerfile\"",
+          "description": "Chemin Dockerfile"
+        },
+        {
+          "name": "RegistryUrl",
+          "datatype": "string",
+          "required": false,
+          "default": "$ContainerRegistry_URL",
+          "description": "URL registre"
+        }
+      ],
+      "returns": {
+        "datatype": "bool",
+        "description": "Succès du push"
+      },
+      "source": "function Build-DockerImageDSI {\n    param(\n        [string]$ImageName,\n        [string]$Tag = 'latest',\n        [string]$DockerfilePath = './Dockerfile',\n        [string]$RegistryUrl = $ContainerRegistry_URL\n    )\n    $fullImage = \"$RegistryUrl/$ImageName`:$Tag\"\n    try {\n        docker build -t $fullImage -f $DockerfilePath . -ErrorAction Stop | Out-Null\n        docker push $fullImage -ErrorAction Stop | Out-Null\n        Write-SysLog \"Image buildée & pushée : $fullImage\"\n        return $true\n    } catch {\n        Write-SysLog \"Échec build/push Docker : $_\" -Level 'ERROR'\n        return $false\n    }\n}",
+      "tags": [
+        "docker",
+        "container",
+        "build"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1402",
+      "type": "function",
+      "name": "Deploy-K8sManifestDSI",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "description": "Applique un manifeste Kubernetes et attend le rollout completion.",
+      "parameters": [
+        {
+          "name": "ManifestPath",
+          "datatype": "string",
+          "required": true,
+          "description": "Chemin YAML/JSON"
+        },
+        {
+          "name": "Namespace",
+          "datatype": "string",
+          "required": false,
+          "default": "\"default\"",
+          "description": "Namespace K8s"
+        },
+        {
+          "name": "KubeConfig",
+          "datatype": "string",
+          "required": false,
+          "default": "$KubeConfig_Path",
+          "description": "Config cluster"
+        }
+      ],
+      "returns": {
+        "datatype": "string",
+        "description": "État final du rollout"
+      },
+      "source": "function Deploy-K8sManifestDSI {\n    param(\n        [string]$ManifestPath,\n        [string]$Namespace = 'default',\n        [string]$KubeConfig = $KubeConfig_Path\n    )\n    $env:KUBECONFIG = $KubeConfig\n    try {\n        kubectl apply -f $ManifestPath -n $Namespace -ErrorAction Stop\n        $deploy = (kubectl get deployment -n $Namespace -o json | ConvertFrom-Json).items | Where-Object { $_.metadata.name -match 'app' } | Select-Object -First 1\n        kubectl rollout status deployment/$($deploy.metadata.name) -n $Namespace --timeout=300s -ErrorAction Stop\n        Write-SysLog \"Déploiement K8s OK : $ManifestPath\"\n        return 'Completed'\n    } catch {\n        Write-SysLog \"Échec déploiement K8s : $_\" -Level 'ERROR'\n        return 'Failed'\n    }\n}",
+      "tags": [
+        "k8s",
+        "deploy",
+        "manifest"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1403",
+      "type": "function",
+      "name": "Invoke-ModelTrainingDSI",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "description": "Soumet une tâche d'entraînement sur le cluster ML (AzureML/Databricks compatible).",
+      "parameters": [
+        {
+          "name": "ScriptPath",
+          "datatype": "string",
+          "required": true,
+          "description": "Chemin script"
+        },
+        {
+          "name": "DatasetUri",
+          "datatype": "string",
+          "required": true,
+          "description": "URI dataset source"
+        },
+        {
+          "name": "ComputeTarget",
+          "datatype": "string",
+          "required": false,
+          "default": "\"gpu-cluster\"",
+          "description": "Cible compute"
+        },
+        {
+          "name": "HyperParams",
+          "datatype": "hashtable",
+          "required": false,
+          "default": "@{}",
+          "description": "Hyperparamètres"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Run ID et statut"
+      },
+      "source": "function Invoke-ModelTrainingDSI {\n    param(\n        [string]$ScriptPath,\n        [string]$DatasetUri,\n        [string]$ComputeTarget = 'gpu-cluster',\n        [hashtable]$HyperParams = @{}\n    )\n    try {\n        $run = Submit-MLJob -Script $ScriptPath -Data $DatasetUri -Compute $ComputeTarget -Params $HyperParams -ErrorAction Stop\n        while ($run.Status -notin 'Completed','Failed') { Start-Sleep -Seconds 15; $run = Get-MLJob $run.RunId }\n        Write-SysLog \"Entraînement terminé : $($run.RunId) | Statut : $($run.Status)\"\n        return $run\n    } catch {\n        Write-SysLog \"Échec entraînement : $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "ml",
+        "training",
+        "cluster"
+      ],
+      "throws": [
+        "MLException"
+      ]
+    },
+    {
+      "id": "fn_1404",
+      "type": "function",
+      "name": "Register-MLModelDSI",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "description": "Enregistre un modèle artifact dans le registre DSI avec métadonnées et versionning.",
+      "parameters": [
+        {
+          "name": "ModelName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom du modèle"
+        },
+        {
+          "name": "ModelPath",
+          "datatype": "string",
+          "required": true,
+          "description": "Chemin artifact"
+        },
+        {
+          "name": "Version",
+          "datatype": "string",
+          "required": true,
+          "description": "Tag version"
+        },
+        {
+          "name": "Metrics",
+          "datatype": "hashtable",
+          "required": false,
+          "default": "@{}",
+          "description": "Métriques eval"
+        }
+      ],
+      "returns": {
+        "datatype": "string",
+        "description": "Model ID généré"
+      },
+      "source": "function Register-MLModelDSI {\n    param(\n        [string]$ModelName,\n        [string]$ModelPath,\n        [string]$Version,\n        [hashtable]$Metrics = @{}\n    )\n    $headers = @{ 'X-DSI-Token' = $CI_CD_TOKEN }\n    $body = @{ name=$ModelName; path=$ModelPath; version=$Version; metrics=$Metrics } | ConvertTo-Json\n    try {\n        $res = Invoke-RestMethod -Uri \"$ML_Registry_URI/models\" -Method Post -Headers $headers -Body $body -ErrorAction Stop\n        Write-SysLog \"Modèle enregistré : $($res.modelId) v$Version\"\n        return $res.modelId\n    } catch {\n        Write-SysLog \"Échec registre modèle : $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "ml",
+        "registry",
+        "versioning"
+      ],
+      "throws": [
+        "HttpRequestException"
+      ]
+    },
+    {
+      "id": "fn_1405",
+      "type": "function",
+      "name": "Get-ModelDriftMetricsDSI",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "description": "Calcule la dérive entre données live et baseline (PSI/KL-Divergence).",
+      "parameters": [
+        {
+          "name": "EndpointUrl",
+          "datatype": "string",
+          "required": true,
+          "description": "Endpoint production"
+        },
+        {
+          "name": "BaselineDataset",
+          "datatype": "string",
+          "required": true,
+          "description": "URI dataset référence"
+        },
+        {
+          "name": "Threshold",
+          "datatype": "double",
+          "required": false,
+          "default": "$DriftThreshold",
+          "description": "Seuil alerte"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Drift score & décision"
+      },
+      "source": "function Get-ModelDriftMetricsDSI {\n    param(\n        [string]$EndpointUrl,\n        [string]$BaselineDataset,\n        [double]$Threshold = $DriftThreshold\n    )\n    try {\n        $live = Invoke-RestMethod \"$EndpointUrl/sampling\" -ErrorAction Stop\n        $driftScore = Calculate-PSI -Target $live -Reference $BaselineDataset\n        $alert = $driftScore -gt $Threshold\n        Write-SysLog \"Drift ML : $driftScore (Seuil: $Threshold) | Alerte: $alert\"\n        return [PSCustomObject]@{ PSI=$driftScore; Threshold=$Threshold; DriftDetected=$alert; Timestamp=(Get-Date) }\n    } catch {\n        Write-SysLog \"Échec calcul drift : $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "ml",
+        "drift",
+        "monitoring"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1406",
+      "type": "function",
+      "name": "Apply-TerraformDSI",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "description": "Exécute un plan Terraform et applique les changements IaC en mode sécurisé.",
+      "parameters": [
+        {
+          "name": "Workspace",
+          "datatype": "string",
+          "required": true,
+          "description": "Workspace cible"
+        },
+        {
+          "name": "VarFile",
+          "datatype": "string",
+          "required": false,
+          "default": "\"terraform.tfvars\"",
+          "description": "Fichier variables"
+        },
+        {
+          "name": "AutoApprove",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Bypass confirmation"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Résumé plan/apply"
+      },
+      "source": "function Apply-TerraformDSI {\n    param(\n        [string]$Workspace,\n        [string]$VarFile = 'terraform.tfvars',\n        [switch]$AutoApprove\n    )\n    try {\n        terraform workspace select $Workspace -ErrorAction Stop\n        terraform init -input=false -ErrorAction Stop\n        $plan = terraform plan -var-file=$VarFile -detailed-exitcode -out=tfplan -ErrorAction Stop\n        if ($LastExitCode -eq 0) { return [PSCustomObject]@{ Action='NoChange'; Status='OK' } }\n        if ($AutoApprove) {\n            terraform apply tfplan -ErrorAction Stop\n            Write-SysLog \"IaC appliqué sur workspace $Workspace\"\n        } else {\n            Write-SysLog \"Plan généré : $Workspace (validation manuelle requise)\" -Level 'WARN'\n        }\n        return [PSCustomObject]@{ Action='Applied'; Status='OK'; PlanSummary=$plan }\n    } catch {\n        Write-SysLog \"Échec Terraform : $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "iac",
+        "terraform",
+        "infrastructure"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1407",
+      "type": "function",
+      "name": "Promote-EnvironmentDSI",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "description": "Promouvoir une version/artifact d'un environnement à un autre (DEV→STG→PRD) avec healthcheck.",
+      "parameters": [
+        {
+          "name": "ServiceName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom du service"
+        },
+        {
+          "name": "SourceEnv",
+          "datatype": "string",
+          "required": true,
+          "description": "Env source"
+        },
+        {
+          "name": "TargetEnv",
+          "datatype": "string",
+          "required": true,
+          "description": "Env cible"
+        },
+        {
+          "name": "Version",
+          "datatype": "string",
+          "required": false,
+          "default": "\"latest\"",
+          "description": "Version à promouvoir"
+        }
+      ],
+      "returns": {
+        "datatype": "bool",
+        "description": "Succès promotion"
+      },
+      "source": "function Promote-EnvironmentDSI {\n    param(\n        [string]$ServiceName,\n        [string]$SourceEnv,\n        [string]$TargetEnv,\n        [string]$Version = 'latest'\n    )\n    try {\n        $artifact = Get-Artifact -Service $ServiceName -Version $Version -Env $SourceEnv\n        Publish-Artifact -Service $ServiceName -Version $artifact.Version -Env $TargetEnv -Force\n        $health = Invoke-HealthCheck -Url \"$ServiceName.corp.local/health\" -MaxRetries 5\n        if (-not $health.Ok) { throw \"Healthcheck échoué post-promotion\" }\n        Write-SysLog \"$ServiceName promu $SourceEnv → $TargetEnv (v$Version)\"\n        return $true\n    } catch {\n        Write-SysLog \"Échec promotion : $_\" -Level 'ERROR'\n        return $false\n    }\n}",
+      "tags": [
+        "cicd",
+        "promote",
+        "environment"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_001",
+      "type": "function",
+      "name": "ReadFileContent",
+      "language": "CSharp",
+      "famille": "IO",
+      "description": "Lit le contenu d'un fichier texte",
+      "parameters": [
+        {
+          "name": "filePath",
+          "datatype": "string",
+          "required": true,
+          "description": "Chemin du fichier"
+        },
+        {
+          "name": "encoding",
+          "datatype": "string",
+          "required": false,
+          "default": "UTF8",
+          "description": "Encodage"
+        }
+      ],
+      "returns": {
+        "datatype": "string",
+        "description": "Contenu du fichier"
+      },
+      "source": "public static string ReadFileContent(string filePath, string encoding = \"UTF8\") {\n    return File.ReadAllText(filePath, Encoding.GetEncoding(encoding));\n}",
+      "tags": [
+        "filesystem",
+        "read",
+        "io"
+      ],
+      "throws": [
+        "FileNotFoundException",
+        "IOException"
+      ]
+    },
+    {
+      "id": "fn_002",
+      "type": "function",
+      "name": "WriteLog",
+      "language": "CSharp",
+      "famille": "Logging",
+      "description": "Écrit une entrée dans le journal",
+      "parameters": [
+        {
+          "name": "message",
+          "datatype": "string",
+          "required": true,
+          "description": "Message à journaliser"
+        },
+        {
+          "name": "level",
+          "datatype": "string",
+          "required": false,
+          "default": "INFO",
+          "description": "Niveau de log"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "public static void WriteLog(string message, string level = \"INFO\") {\n    Console.WriteLine($\"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}\");\n}",
+      "tags": [
+        "logging",
+        "output"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_200",
+      "type": "function",
+      "name": "New-ADUserDSI",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Crée un compte utilisateur AD avec conventions DSI : UPN, prénom.nom, OU, groupes de base, mot de passe temporaire.",
+      "parameters": [
+        {
+          "name": "GivenName",
+          "datatype": "string",
+          "required": true,
+          "description": "Prénom"
+        },
+        {
+          "name": "Surname",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom de famille"
+        },
+        {
+          "name": "Department",
+          "datatype": "string",
+          "required": true,
+          "description": "Département (ex: Comptabilité)"
+        },
+        {
+          "name": "OU",
+          "datatype": "string",
+          "required": false,
+          "default": "$DefaultOUUsers",
+          "description": "OU de destination"
+        },
+        {
+          "name": "BaseGroups",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@('GRP_Utilisateurs')",
+          "description": "Groupes AD à ajouter par défaut"
+        },
+        {
+          "name": "TempPassword",
+          "datatype": "string",
+          "required": false,
+          "default": "\"P@ss_Temp2025!\"",
+          "description": "Mot de passe temporaire"
+        }
+      ],
+      "returns": {
+        "datatype": "ADUser",
+        "description": "Objet ADUser créé"
+      },
+      "source": "function New-ADUserDSI {\n    param(\n        [string]$GivenName,\n        [string]$Surname,\n        [string]$Department,\n        [string]$OU = $DefaultOUUsers,\n        [string[]]$BaseGroups = @('GRP_Utilisateurs'),\n        [string]$TempPassword = 'P@ss_Temp2025!'\n    )\n    $sam = ($GivenName.Substring(0,1) + $Surname).ToLower() -replace '[^a-z0-9]',''\n    $upn = \"$sam@$DomainFQDN\"\n    $secPwd = ConvertTo-SecureString $TempPassword -AsPlainText -Force\n    try {\n        $user = New-ADUser -GivenName $GivenName -Surname $Surname `\n            -Name \"$GivenName $Surname\" -SamAccountName $sam `\n            -UserPrincipalName $upn -Department $Department `\n            -Path $OU -AccountPassword $secPwd `\n            -ChangePasswordAtLogon $true -Enabled $true -PassThru\n        foreach ($grp in $BaseGroups) { Add-ADGroupMember -Identity $grp -Members $sam -ErrorAction SilentlyContinue }\n        Write-SysLog \"Utilisateur créé : $sam ($upn)\" -Level 'INFO'\n        return $user\n    } catch {\n        Write-SysLog \"Erreur création utilisateur $sam : $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "ad",
+        "users",
+        "create"
+      ],
+      "throws": [
+        "ADException"
+      ]
+    },
+    {
+      "id": "fn_201",
+      "type": "function",
+      "name": "Disable-ADUserDSI",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Désactive un compte AD, révoque ses groupes, déplace dans OU Archives, et journalise avec motif.",
+      "parameters": [
+        {
+          "name": "SamAccountName",
+          "datatype": "string",
+          "required": true,
+          "description": "Login utilisateur AD"
+        },
+        {
+          "name": "Reason",
+          "datatype": "string",
+          "required": true,
+          "description": "Motif de désactivation (départ, suspension...)"
+        },
+        {
+          "name": "ArchiveOU",
+          "datatype": "string",
+          "required": false,
+          "default": "\"OU=Archives,DC=corp,DC=local\"",
+          "description": "OU d'archivage"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Disable-ADUserDSI {\n    param(\n        [string]$SamAccountName,\n        [string]$Reason,\n        [string]$ArchiveOU = 'OU=Archives,DC=corp,DC=local'\n    )\n    try {\n        $user = Get-ADUser -Identity $SamAccountName -Properties MemberOf\n        Disable-ADAccount -Identity $SamAccountName\n        $user.MemberOf | ForEach-Object { Remove-ADGroupMember -Identity $_ -Members $SamAccountName -Confirm:$false -ErrorAction SilentlyContinue }\n        Move-ADObject -Identity $user.DistinguishedName -TargetPath $ArchiveOU\n        Set-ADUser -Identity $SamAccountName -Description \"DESACTIVE $(Get-Date -f yyyy-MM-dd) - $Reason\"\n        Write-SysLog \"Compte désactivé : $SamAccountName | Motif : $Reason\" -Level 'WARN'\n    } catch {\n        Write-SysLog \"Erreur désactivation $SamAccountName : $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "ad",
+        "users",
+        "disable",
+        "offboarding"
+      ],
+      "throws": [
+        "ADException"
+      ]
+    },
+    {
+      "id": "fn_202",
+      "type": "function",
+      "name": "Reset-ADUserPassword",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Réinitialise le mot de passe AD d'un utilisateur avec forçage de changement à la prochaine connexion.",
+      "parameters": [
+        {
+          "name": "SamAccountName",
+          "datatype": "string",
+          "required": true,
+          "description": "Login utilisateur"
+        },
+        {
+          "name": "NewPassword",
+          "datatype": "string",
+          "required": true,
+          "description": "Nouveau mot de passe temporaire"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Reset-ADUserPassword {\n    param(\n        [string]$SamAccountName,\n        [string]$NewPassword\n    )\n    $secPwd = ConvertTo-SecureString $NewPassword -AsPlainText -Force\n    Set-ADAccountPassword -Identity $SamAccountName -NewPassword $secPwd -Reset\n    Set-ADUser -Identity $SamAccountName -ChangePasswordAtLogon $true\n    Unlock-ADAccount -Identity $SamAccountName\n    Write-SysLog \"MDP réinitialisé pour $SamAccountName\" -Level 'INFO'\n}",
+      "tags": [
+        "ad",
+        "password",
+        "security"
+      ],
+      "throws": [
+        "ADException"
+      ]
+    },
+    {
+      "id": "fn_203",
+      "type": "function",
+      "name": "Get-ADGroupMembersDSI",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Retourne les membres d'un groupe AD avec leurs attributs clés, récursivement si demandé.",
+      "parameters": [
+        {
+          "name": "GroupName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom ou DN du groupe AD"
+        },
+        {
+          "name": "Recursive",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Inclure membres des sous-groupes"
+        },
+        {
+          "name": "EnabledOnly",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Filtrer sur comptes actifs uniquement"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Tableau d'objets {Name, SamAccountName, Enabled, LastLogon, Mail}"
+      },
+      "source": "function Get-ADGroupMembersDSI {\n    param(\n        [string]$GroupName,\n        [switch]$Recursive,\n        [switch]$EnabledOnly\n    )\n    $members = Get-ADGroupMember -Identity $GroupName -Recursive:$Recursive | Where-Object { $_.objectClass -eq 'user' }\n    $result = foreach ($m in $members) {\n        $u = Get-ADUser $m -Properties Enabled, LastLogonDate, EmailAddress\n        if ($EnabledOnly -and -not $u.Enabled) { continue }\n        [PSCustomObject]@{\n            Name           = $u.Name\n            SamAccountName = $u.SamAccountName\n            Enabled        = $u.Enabled\n            LastLogon      = $u.LastLogonDate\n            Mail           = $u.EmailAddress\n        }\n    }\n    return $result\n}",
+      "tags": [
+        "ad",
+        "group",
+        "users",
+        "audit"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_204",
+      "type": "function",
+      "name": "Set-ADUserOU",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Déplace un compte utilisateur ou ordinateur AD vers une nouvelle OU.",
+      "parameters": [
+        {
+          "name": "SamAccountName",
+          "datatype": "string",
+          "required": true,
+          "description": "SamAccountName de l'objet AD"
+        },
+        {
+          "name": "TargetOU",
+          "datatype": "string",
+          "required": true,
+          "description": "DN de l'OU de destination"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Set-ADUserOU {\n    param([string]$SamAccountName, [string]$TargetOU)\n    $dn = (Get-ADUser -Identity $SamAccountName).DistinguishedName\n    Move-ADObject -Identity $dn -TargetPath $TargetOU\n    Write-SysLog \"Objet $SamAccountName déplacé vers $TargetOU\"\n}",
+      "tags": [
+        "ad",
+        "ou",
+        "move"
+      ],
+      "throws": [
+        "ADException"
+      ]
+    },
+    {
+      "id": "fn_205",
+      "type": "function",
+      "name": "Get-StaleADAccounts",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Identifie les comptes AD inactifs depuis plus de N jours (audit sécurité DSI).",
+      "parameters": [
+        {
+          "name": "InactiveDays",
+          "datatype": "int",
+          "required": false,
+          "default": "90",
+          "description": "Seuil d'inactivité en jours"
+        },
+        {
+          "name": "SearchBase",
+          "datatype": "string",
+          "required": false,
+          "default": "$DefaultOUUsers",
+          "description": "OU de recherche"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Liste des comptes inactifs"
+      },
+      "source": "function Get-StaleADAccounts {\n    param(\n        [int]$InactiveDays = 90,\n        [string]$SearchBase = $DefaultOUUsers\n    )\n    $cutoff = (Get-Date).AddDays(-$InactiveDays)\n    Get-ADUser -Filter { LastLogonDate -lt $cutoff -and Enabled -eq $true } `\n        -SearchBase $SearchBase `\n        -Properties LastLogonDate, EmailAddress, Department | `\n        Select-Object Name, SamAccountName, LastLogonDate, Department, EmailAddress\n}",
+      "tags": [
+        "ad",
+        "audit",
+        "security",
+        "cleanup"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_206",
+      "type": "function",
+      "name": "Sync-ADGroup",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Synchronise les membres d'un groupe AD avec une liste de référence (ajouts/suppressions automatiques).",
+      "parameters": [
+        {
+          "name": "GroupName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom du groupe AD cible"
+        },
+        {
+          "name": "ReferenceList",
+          "datatype": "string[]",
+          "required": true,
+          "description": "Liste de SamAccountNames de référence"
+        },
+        {
+          "name": "WhatIf",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Simulation sans modification"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Rapport {Added[], Removed[], Unchanged[]}"
+      },
+      "source": "function Sync-ADGroup {\n    param([string]$GroupName, [string[]]$ReferenceList, [switch]$WhatIf)\n    $current = (Get-ADGroupMember $GroupName | Where-Object objectClass -eq 'user').SamAccountName\n    $toAdd    = $ReferenceList | Where-Object { $_ -notin $current }\n    $toRemove = $current       | Where-Object { $_ -notin $ReferenceList }\n    if (-not $WhatIf) {\n        if ($toAdd)    { Add-ADGroupMember    -Identity $GroupName -Members $toAdd    -ErrorAction Continue }\n        if ($toRemove) { Remove-ADGroupMember -Identity $GroupName -Members $toRemove -ErrorAction Continue }\n    }\n    Write-SysLog \"Sync $GroupName : +$($toAdd.Count) / -$($toRemove.Count)\" -Level ($WhatIf ? 'DEBUG' : 'INFO')\n    return [PSCustomObject]@{ Added=$toAdd; Removed=$toRemove; Unchanged=($current | Where-Object { $_ -in $ReferenceList }) }\n}",
+      "tags": [
+        "ad",
+        "group",
+        "sync",
+        "automation"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_300",
+      "type": "function",
+      "name": "New-NTFSShare",
+      "language": "PowerShell",
+      "famille": "Shares",
+      "description": "Crée un partage réseau SMB et applique les permissions NTFS selon le modèle DSI (droits groupe AD).",
+      "parameters": [
+        {
+          "name": "FolderPath",
+          "datatype": "string",
+          "required": true,
+          "description": "Chemin local du dossier à partager"
+        },
+        {
+          "name": "ShareName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom du partage réseau"
+        },
+        {
+          "name": "ReadGroups",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@()",
+          "description": "Groupes AD avec accès Lecture"
+        },
+        {
+          "name": "WriteGroups",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@()",
+          "description": "Groupes AD avec accès Modification"
+        },
+        {
+          "name": "FullGroups",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@('GRP_Admins_SI')",
+          "description": "Groupes AD avec Contrôle Total"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function New-NTFSShare {\n    param(\n        [string]$FolderPath,\n        [string]$ShareName,\n        [string[]]$ReadGroups  = @(),\n        [string[]]$WriteGroups = @(),\n        [string[]]$FullGroups  = @('GRP_Admins_SI')\n    )\n    if (-not (Test-Path $FolderPath)) { New-Item -ItemType Directory -Path $FolderPath -Force | Out-Null }\n    New-SmbShare -Name $ShareName -Path $FolderPath -FullAccess 'Everyone' -ErrorAction Stop\n    $acl = Get-Acl $FolderPath\n    $acl.SetAccessRuleProtection($true, $false)\n    foreach ($g in $ReadGroups)  { $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($g,'Read','ContainerInherit,ObjectInherit','None','Allow')) }\n    foreach ($g in $WriteGroups) { $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($g,'Modify','ContainerInherit,ObjectInherit','None','Allow')) }\n    foreach ($g in $FullGroups)  { $acl.AddAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($g,'FullControl','ContainerInherit,ObjectInherit','None','Allow')) }\n    Set-Acl -Path $FolderPath -AclObject $acl\n    Write-SysLog \"Partage créé : \\\\$(hostname)\\$ShareName → $FolderPath\"\n}",
+      "tags": [
+        "shares",
+        "ntfs",
+        "smb",
+        "permissions"
+      ],
+      "throws": [
+        "UnauthorizedAccessException"
+      ]
+    },
+    {
+      "id": "fn_301",
+      "type": "function",
+      "name": "Set-NTFSPermission",
+      "language": "PowerShell",
+      "famille": "Shares",
+      "description": "Applique ou modifie une règle NTFS sur un dossier pour un compte ou groupe AD.",
+      "parameters": [
+        {
+          "name": "Path",
+          "datatype": "string",
+          "required": true,
+          "description": "Chemin du dossier"
+        },
+        {
+          "name": "Identity",
+          "datatype": "string",
+          "required": true,
+          "description": "Compte ou groupe AD (DOMAIN\\nom)"
+        },
+        {
+          "name": "Rights",
+          "datatype": "string",
+          "required": true,
+          "description": "Read | Modify | FullControl"
+        },
+        {
+          "name": "AccessType",
+          "datatype": "string",
+          "required": false,
+          "default": "\"Allow\"",
+          "description": "Allow | Deny"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Set-NTFSPermission {\n    param(\n        [string]$Path,\n        [string]$Identity,\n        [ValidateSet('Read','Modify','FullControl')][string]$Rights,\n        [ValidateSet('Allow','Deny')][string]$AccessType = 'Allow'\n    )\n    $acl  = Get-Acl $Path\n    $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(\n        $Identity, $Rights, 'ContainerInherit,ObjectInherit', 'None', $AccessType)\n    $acl.AddAccessRule($rule)\n    Set-Acl -Path $Path -AclObject $acl\n    Write-SysLog \"Permission $Rights ($AccessType) ajoutée sur $Path pour $Identity\"\n}",
+      "tags": [
+        "ntfs",
+        "permissions",
+        "security"
+      ],
+      "throws": [
+        "UnauthorizedAccessException"
+      ]
+    },
+    {
+      "id": "fn_302",
+      "type": "function",
+      "name": "Get-ShareAudit",
+      "language": "PowerShell",
+      "famille": "Shares",
+      "description": "Audite tous les partages SMB d'un serveur et retourne leurs permissions effectives.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Nom du serveur à auditer"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Liste des partages avec permissions"
+      },
+      "source": "function Get-ShareAudit {\n    param([string]$ComputerName = $env:COMPUTERNAME)\n    Get-SmbShare -CimSession $ComputerName | ForEach-Object {\n        $share = $_\n        $perms = Get-SmbShareAccess -Name $share.Name -CimSession $ComputerName\n        [PSCustomObject]@{\n            Server    = $ComputerName\n            Share     = $share.Name\n            Path      = $share.Path\n            Remark    = $share.Description\n            Permissions = ($perms | Select-Object AccountName, AccessControlType, AccessRight)\n        }\n    }\n}",
+      "tags": [
+        "shares",
+        "audit",
+        "smb"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_400",
+      "type": "function",
+      "name": "Install-WindowsUpdates",
+      "language": "PowerShell",
+      "famille": "Updates",
+      "description": "Lance l'installation des mises à jour Windows disponibles via Windows Update / WSUS. Redémarre si requis.",
+      "parameters": [
+        {
+          "name": "AcceptAll",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Installer toutes les MAJ sans confirmation"
+        },
+        {
+          "name": "AutoReboot",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Redémarrer automatiquement si requis"
+        },
+        {
+          "name": "ExcludeKBs",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@()",
+          "description": "Liste de KB à exclure"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Rapport des mises à jour installées"
+      },
+      "source": "function Install-WindowsUpdates {\n    param([switch]$AcceptAll, [switch]$AutoReboot, [string[]]$ExcludeKBs = @())\n    if (-not (Get-Module -ListAvailable PSWindowsUpdate)) {\n        Install-Module PSWindowsUpdate -Force -Scope CurrentUser\n    }\n    Import-Module PSWindowsUpdate\n    $params = @{ AcceptAll = $AcceptAll; AutoReboot = $AutoReboot; Verbose = $true }\n    if ($ExcludeKBs) { $params['NotKBArticleID'] = $ExcludeKBs }\n    $result = Get-WindowsUpdate @params -Install\n    Write-SysLog \"MAJ appliquées : $($result.Count) | Reboot requis : $(Get-WURebootStatus -Silent)\"\n    return $result\n}",
+      "tags": [
+        "updates",
+        "wsus",
+        "windows",
+        "maintenance"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_401",
+      "type": "function",
+      "name": "Get-PendingUpdates",
+      "language": "PowerShell",
+      "famille": "Updates",
+      "description": "Liste les mises à jour Windows en attente sur un ou plusieurs postes.",
+      "parameters": [
+        {
+          "name": "ComputerNames",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@($env:COMPUTERNAME)",
+          "description": "Postes à interroger"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "MAJ en attente par machine"
+      },
+      "source": "function Get-PendingUpdates {\n    param([string[]]$ComputerNames = @($env:COMPUTERNAME))\n    foreach ($pc in $ComputerNames) {\n        try {\n            $session = New-CimSession -ComputerName $pc -ErrorAction Stop\n            $updates = Invoke-CimMethod -Namespace 'root/Microsoft/Windows/WindowsUpdate' `\n                -ClassName 'MSFT_WUOperations' -MethodName 'ScanForUpdates' `\n                -Arguments @{SearchCriteria='IsInstalled=0'} -CimSession $session\n            [PSCustomObject]@{ Computer=$pc; PendingCount=$updates.Updates.Count; Updates=$updates.Updates }\n        } catch {\n            [PSCustomObject]@{ Computer=$pc; PendingCount='ERROR'; Updates=$_.Exception.Message }\n        }\n    }\n}",
+      "tags": [
+        "updates",
+        "audit",
+        "wsus"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_500",
+      "type": "function",
+      "name": "Test-NetworkDiag",
+      "language": "PowerShell",
+      "famille": "Network",
+      "description": "Diagnostic réseau complet : ping, traceroute, résolution DNS, test port TCP.",
+      "parameters": [
+        {
+          "name": "Target",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom d'hôte ou IP cible"
+        },
+        {
+          "name": "Port",
+          "datatype": "int",
+          "required": false,
+          "default": "443",
+          "description": "Port TCP à tester"
+        },
+        {
+          "name": "DnsServer",
+          "datatype": "string",
+          "required": false,
+          "default": "\"\"",
+          "description": "Serveur DNS à utiliser (vide = défaut)"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Rapport {Ping, Latency, DNS, Port, TraceRoute}"
+      },
+      "source": "function Test-NetworkDiag {\n    param([string]$Target, [int]$Port = 443, [string]$DnsServer = '')\n    $ping = Test-Connection -ComputerName $Target -Count 4 -Quiet\n    $lat  = (Test-Connection -ComputerName $Target -Count 4 | Measure-Object -Property ResponseTime -Average).Average\n    $dns  = if ($DnsServer) { Resolve-DnsName $Target -Server $DnsServer -ErrorAction SilentlyContinue }\n            else             { Resolve-DnsName $Target -ErrorAction SilentlyContinue }\n    $tcpTest = Test-NetConnection -ComputerName $Target -Port $Port -WarningAction SilentlyContinue\n    $trace = tracert -d $Target 2>&1\n    $report = [PSCustomObject]@{\n        Target    = $Target\n        Ping      = $ping\n        AvgLatencyMs = [math]::Round($lat, 1)\n        DNSRecord = $dns.IPAddress -join ', '\n        PortOpen  = $tcpTest.TcpTestSucceeded\n        Port      = $Port\n        TraceRoute = $trace\n    }\n    Write-SysLog \"Diag réseau $Target : Ping=$ping | Latence=${lat}ms | Port $Port=$($tcpTest.TcpTestSucceeded)\"\n    return $report\n}",
+      "tags": [
+        "network",
+        "diagnostic",
+        "ping",
+        "dns"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_501",
+      "type": "function",
+      "name": "Get-NetworkAdapterInfo",
+      "language": "PowerShell",
+      "famille": "Network",
+      "description": "Retourne la configuration réseau complète d'un poste : IP, masque, gateway, DNS, MAC.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Nom du poste"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Adaptateurs avec configuration IP"
+      },
+      "source": "function Get-NetworkAdapterInfo {\n    param([string]$ComputerName = $env:COMPUTERNAME)\n    Get-NetIPConfiguration -CimSession $ComputerName | ForEach-Object {\n        [PSCustomObject]@{\n            Adapter    = $_.InterfaceAlias\n            IPAddress  = ($_.IPv4Address.IPAddress -join ', ')\n            Prefix     = ($_.IPv4Address.PrefixLength -join ', ')\n            Gateway    = $_.IPv4DefaultGateway.NextHop\n            DNS        = ($_.DNSServer.ServerAddresses -join ', ')\n            MACAddress = (Get-NetAdapter -Name $_.InterfaceAlias -CimSession $ComputerName -ErrorAction SilentlyContinue).MacAddress\n        }\n    }\n}",
+      "tags": [
+        "network",
+        "ip",
+        "adapter",
+        "inventory"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_502",
+      "type": "function",
+      "name": "Get-OpenPorts",
+      "language": "PowerShell",
+      "famille": "Network",
+      "description": "Liste les ports TCP/UDP en écoute sur un poste avec les processus associés.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste cible"
+        },
+        {
+          "name": "Protocol",
+          "datatype": "string",
+          "required": false,
+          "default": "\"TCP\"",
+          "description": "TCP | UDP | Both"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Ports ouverts avec processus"
+      },
+      "source": "function Get-OpenPorts {\n    param([string]$ComputerName = $env:COMPUTERNAME, [string]$Protocol = 'TCP')\n    $connections = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n        param($proto)\n        $ports = if ($proto -in 'TCP','Both') { Get-NetTCPConnection -State Listen } else { @() }\n        $ports += if ($proto -in 'UDP','Both') { Get-NetUDPEndpoint } else { @() }\n        $ports | ForEach-Object {\n            $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue\n            [PSCustomObject]@{ Port=$_.LocalPort; Protocol=$proto; PID=$_.OwningProcess; Process=$proc.Name }\n        }\n    } -ArgumentList $Protocol\n    return $connections | Sort-Object Port\n}",
+      "tags": [
+        "network",
+        "security",
+        "ports",
+        "audit"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_503",
+      "type": "function",
+      "name": "Set-DNSEntry",
+      "language": "PowerShell",
+      "famille": "Network",
+      "description": "Crée ou met à jour un enregistrement DNS A dans une zone DNS Windows.",
+      "parameters": [
+        {
+          "name": "ZoneName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom de la zone DNS"
+        },
+        {
+          "name": "RecordName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom de l'enregistrement"
+        },
+        {
+          "name": "IPAddress",
+          "datatype": "string",
+          "required": true,
+          "description": "Adresse IP"
+        },
+        {
+          "name": "DNSServer",
+          "datatype": "string",
+          "required": false,
+          "default": "$DomainController",
+          "description": "Serveur DNS"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Set-DNSEntry {\n    param([string]$ZoneName, [string]$RecordName, [string]$IPAddress, [string]$DNSServer = $DomainController)\n    $existing = Get-DnsServerResourceRecord -ZoneName $ZoneName -Name $RecordName -RRType A -ComputerName $DNSServer -ErrorAction SilentlyContinue\n    if ($existing) {\n        Remove-DnsServerResourceRecord -ZoneName $ZoneName -Name $RecordName -RRType A -ComputerName $DNSServer -Force\n    }\n    Add-DnsServerResourceRecordA -ZoneName $ZoneName -Name $RecordName -IPv4Address $IPAddress -ComputerName $DNSServer\n    Write-SysLog \"DNS : $RecordName.$ZoneName → $IPAddress (serveur $DNSServer)\"\n}",
+      "tags": [
+        "network",
+        "dns",
+        "infrastructure"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_600",
+      "type": "function",
+      "name": "Get-SystemInventory",
+      "language": "PowerShell",
+      "famille": "Inventory",
+      "description": "Collecte l'inventaire matériel et logiciel complet d'un poste ou serveur Windows.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste à inventorier"
+        },
+        {
+          "name": "IncludeSoftware",
+          "datatype": "switch",
+          "required": false,
+          "default": "true",
+          "description": "Inclure liste des logiciels installés"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Inventaire complet (HW, OS, RAM, CPU, Disk, Software)"
+      },
+      "source": "function Get-SystemInventory {\n    param([string]$ComputerName = $env:COMPUTERNAME, [switch]$IncludeSoftware)\n    $cs   = Get-CimInstance Win32_ComputerSystem  -ComputerName $ComputerName\n    $os   = Get-CimInstance Win32_OperatingSystem  -ComputerName $ComputerName\n    $cpu  = Get-CimInstance Win32_Processor        -ComputerName $ComputerName\n    $bios = Get-CimInstance Win32_BIOS             -ComputerName $ComputerName\n    $disk = Get-CimInstance Win32_LogicalDisk       -ComputerName $ComputerName -Filter \"DriveType=3\"\n    $ram  = [math]::Round($cs.TotalPhysicalMemory/1GB, 2)\n    $sw   = if ($IncludeSoftware) {\n                Get-CimInstance Win32_Product -ComputerName $ComputerName | Select-Object Name, Version, Vendor\n            } else { @() }\n    [PSCustomObject]@{\n        Computer   = $ComputerName\n        Model      = \"$($cs.Manufacturer) $($cs.Model)\"\n        SerialNo   = $bios.SerialNumber\n        OS         = \"$($os.Caption) $($os.Version)\"\n        CPU        = $cpu.Name\n        RAM_GB     = $ram\n        Disks      = $disk | Select-Object DeviceID, @{n='Size_GB';e={[math]::Round($_.Size/1GB,1)}}, @{n='Free_GB';e={[math]::Round($_.FreeSpace/1GB,1)}}\n        Software   = $sw\n        CollectedAt = Get-Date\n    }\n}",
+      "tags": [
+        "inventory",
+        "audit",
+        "hardware",
+        "software"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_601",
+      "type": "function",
+      "name": "Get-DiskHealth",
+      "language": "PowerShell",
+      "famille": "Inventory",
+      "description": "Vérifie l'état de santé des disques physiques (SMART) et l'espace disponible sur les volumes.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste à analyser"
+        },
+        {
+          "name": "ThresholdPct",
+          "datatype": "int",
+          "required": false,
+          "default": "15",
+          "description": "Seuil d'alerte espace libre (%)"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "État des volumes avec alertes"
+      },
+      "source": "function Get-DiskHealth {\n    param([string]$ComputerName = $env:COMPUTERNAME, [int]$ThresholdPct = 15)\n    $disks = Get-CimInstance Win32_LogicalDisk -ComputerName $ComputerName -Filter 'DriveType=3'\n    foreach ($d in $disks) {\n        $total   = [math]::Round($d.Size/1GB, 1)\n        $free    = [math]::Round($d.FreeSpace/1GB, 1)\n        $pctFree = [math]::Round(($d.FreeSpace/$d.Size)*100, 1)\n        $alert   = $pctFree -le $ThresholdPct\n        if ($alert) { Write-SysLog \"ALERTE espace disque $($d.DeviceID) sur $ComputerName : $pctFree% libre\" -Level 'WARN' }\n        [PSCustomObject]@{ Computer=$ComputerName; Drive=$d.DeviceID; Total_GB=$total; Free_GB=$free; FreePct=$pctFree; Alert=$alert }\n    }\n}",
+      "tags": [
+        "disk",
+        "health",
+        "monitoring",
+        "alert"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_700",
+      "type": "function",
+      "name": "Manage-WindowsService",
+      "language": "PowerShell",
+      "famille": "Services",
+      "description": "Démarre, arrête, redémarre ou modifie le type de démarrage d'un service Windows local ou distant.",
+      "parameters": [
+        {
+          "name": "ServiceName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom du service Windows"
+        },
+        {
+          "name": "Action",
+          "datatype": "string",
+          "required": true,
+          "description": "Start | Stop | Restart | SetStartup"
+        },
+        {
+          "name": "StartupType",
+          "datatype": "string",
+          "required": false,
+          "default": "\"Automatic\"",
+          "description": "Automatic | Manual | Disabled (pour SetStartup)"
+        },
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste cible"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "État du service après action"
+      },
+      "source": "function Manage-WindowsService {\n    param(\n        [string]$ServiceName,\n        [ValidateSet('Start','Stop','Restart','SetStartup')][string]$Action,\n        [string]$StartupType = 'Automatic',\n        [string]$ComputerName = $env:COMPUTERNAME\n    )\n    switch ($Action) {\n        'Start'      { Start-Service   -Name $ServiceName -ComputerName $ComputerName }\n        'Stop'       { Stop-Service    -Name $ServiceName -ComputerName $ComputerName -Force }\n        'Restart'    { Restart-Service -Name $ServiceName -ComputerName $ComputerName -Force }\n        'SetStartup' { Set-Service     -Name $ServiceName -ComputerName $ComputerName -StartupType $StartupType }\n    }\n    $svc = Get-Service -Name $ServiceName -ComputerName $ComputerName\n    Write-SysLog \"Service $ServiceName sur $ComputerName : Action=$Action | État=$($svc.Status)\"\n    return $svc\n}",
+      "tags": [
+        "services",
+        "windows",
+        "administration"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_701",
+      "type": "function",
+      "name": "Get-ServiceHealth",
+      "language": "PowerShell",
+      "famille": "Services",
+      "description": "Vérifie l'état d'une liste de services critiques et alerte si l'un est arrêté.",
+      "parameters": [
+        {
+          "name": "CriticalServices",
+          "datatype": "string[]",
+          "required": true,
+          "description": "Liste des services à surveiller"
+        },
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste cible"
+        },
+        {
+          "name": "AlertEmail",
+          "datatype": "string",
+          "required": false,
+          "default": "\"\"",
+          "description": "Email d'alerte si service arrêté"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "État de chaque service"
+      },
+      "source": "function Get-ServiceHealth {\n    param([string[]]$CriticalServices, [string]$ComputerName = $env:COMPUTERNAME, [string]$AlertEmail = '')\n    $results = foreach ($svc in $CriticalServices) {\n        $s = Get-Service -Name $svc -ComputerName $ComputerName -ErrorAction SilentlyContinue\n        $ok = $s -and $s.Status -eq 'Running'\n        if (-not $ok) {\n            Write-SysLog \"SERVICE ARRÊTÉ : $svc sur $ComputerName\" -Level 'ERROR'\n            if ($AlertEmail) { Send-AlertMail -To $AlertEmail -Subject \"[ALERTE] Service $svc arrêté\" -Body \"Le service $svc sur $ComputerName est arrêté.\" }\n        }\n        [PSCustomObject]@{ Computer=$ComputerName; Service=$svc; Status=$s.Status; Healthy=$ok }\n    }\n    return $results\n}",
+      "tags": [
+        "services",
+        "monitoring",
+        "alert"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_800",
+      "type": "function",
+      "name": "Get-SecurityEvents",
+      "language": "PowerShell",
+      "famille": "Security",
+      "description": "Extrait les événements de sécurité Windows (échecs logon, lockouts, audits) pour une période donnée.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$DomainController",
+          "description": "Serveur source (Security log)"
+        },
+        {
+          "name": "EventIDs",
+          "datatype": "int[]",
+          "required": false,
+          "default": "$CriticalEventIDs",
+          "description": "IDs d'événements à collecter"
+        },
+        {
+          "name": "HoursBack",
+          "datatype": "int",
+          "required": false,
+          "default": "24",
+          "description": "Fenêtre temporelle en heures"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Événements collectés"
+      },
+      "source": "function Get-SecurityEvents {\n    param(\n        [string]$ComputerName = $DomainController,\n        [int[]]$EventIDs = $CriticalEventIDs,\n        [int]$HoursBack = 24\n    )\n    $since  = (Get-Date).AddHours(-$HoursBack)\n    $filter = @{ LogName='Security'; Id=$EventIDs; StartTime=$since }\n    Get-WinEvent -FilterHashtable $filter -ComputerName $ComputerName -ErrorAction SilentlyContinue | ForEach-Object {\n        [PSCustomObject]@{\n            TimeCreated = $_.TimeCreated\n            EventID     = $_.Id\n            Level       = $_.LevelDisplayName\n            Message     = $_.Message.Substring(0, [Math]::Min(200, $_.Message.Length))\n            Computer    = $_.MachineName\n        }\n    }\n}",
+      "tags": [
+        "security",
+        "eventlog",
+        "audit",
+        "monitoring"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_801",
+      "type": "function",
+      "name": "Get-LockedADAccounts",
+      "language": "PowerShell",
+      "famille": "Security",
+      "description": "Liste les comptes AD verrouillés avec l'origine du verrouillage (EventLog 4740).",
+      "parameters": [
+        {
+          "name": "SearchBase",
+          "datatype": "string",
+          "required": false,
+          "default": "$DefaultOUUsers",
+          "description": "OU de recherche"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Comptes verrouillés avec détails"
+      },
+      "source": "function Get-LockedADAccounts {\n    param([string]$SearchBase = $DefaultOUUsers)\n    $locked = Search-ADAccount -LockedOut -SearchBase $SearchBase -UsersOnly\n    foreach ($u in $locked) {\n        $lockEvent = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4740} -ComputerName $DomainController -MaxEvents 100 -ErrorAction SilentlyContinue |\n            Where-Object { $_.Properties[0].Value -eq $u.SamAccountName } | Select-Object -First 1\n        [PSCustomObject]@{\n            SamAccountName = $u.SamAccountName\n            Name           = $u.Name\n            LockedOutTime  = $u.AccountLockoutTime\n            LockSource     = $lockEvent.Properties[1].Value\n            LockSourceIP   = $lockEvent.Properties[19].Value\n        }\n    }\n}",
+      "tags": [
+        "security",
+        "ad",
+        "lockout",
+        "audit"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_802",
+      "type": "function",
+      "name": "Invoke-SecurityBaseline",
+      "language": "PowerShell",
+      "famille": "Security",
+      "description": "Vérifie la conformité d'un poste aux règles de sécurité DSI : pare-feu, BitLocker, antivirus, UAC, audit policy.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste à analyser"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject",
+        "description": "Rapport de conformité sécurité"
+      },
+      "source": "function Invoke-SecurityBaseline {\n    param([string]$ComputerName = $env:COMPUTERNAME)\n    $fw      = (Get-NetFirewallProfile -CimSession $ComputerName | Where-Object Enabled -eq $true).Count -ge 1\n    $bl      = (Get-BitLockerVolume -CimSession $ComputerName -ErrorAction SilentlyContinue | Where-Object ProtectionStatus -eq 'On').Count -ge 1\n    $uac     = Invoke-Command $ComputerName { (Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System').EnableLUA -eq 1 }\n    $av      = (Get-CimInstance -Namespace 'root/SecurityCenter2' -ClassName AntiVirusProduct -CimSession $ComputerName -ErrorAction SilentlyContinue | Where-Object productState -ne 397568).Count -ge 1\n    $pwdAge  = (Get-ADDefaultDomainPasswordPolicy).MaxPasswordAge.Days -le $MaxPasswordAgeDays\n    $report  = [PSCustomObject]@{ Computer=$ComputerName; Firewall=$fw; BitLocker=$bl; UAC=$uac; Antivirus=$av; PasswordPolicy=$pwdAge; Compliant=($fw -and $bl -and $uac -and $av -and $pwdAge) }\n    if (-not $report.Compliant) { Write-SysLog \"Baseline NON CONFORME sur $ComputerName\" -Level 'WARN' }\n    return $report\n}",
+      "tags": [
+        "security",
+        "baseline",
+        "compliance",
+        "audit"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_900",
+      "type": "function",
+      "name": "Get-ADComputersList",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Retourne la liste des ordinateurs AD d'une OU avec état de connectivité et informations OS.",
+      "parameters": [
+        {
+          "name": "SearchBase",
+          "datatype": "string",
+          "required": false,
+          "default": "$DefaultOUComputers",
+          "description": "OU de recherche"
+        },
+        {
+          "name": "PingCheck",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Tester la connectivité réseau"
+        },
+        {
+          "name": "OSFilter",
+          "datatype": "string",
+          "required": false,
+          "default": "\"*\"",
+          "description": "Filtre sur OperatingSystem (ex: *Server*)"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Liste des ordinateurs AD"
+      },
+      "source": "function Get-ADComputersList {\n    param([string]$SearchBase = $DefaultOUComputers, [switch]$PingCheck, [string]$OSFilter = '*')\n    $computers = Get-ADComputer -Filter \"OperatingSystem -like '$OSFilter'\" -SearchBase $SearchBase `\n        -Properties OperatingSystem, OperatingSystemVersion, LastLogonDate, IPv4Address, Description\n    foreach ($c in $computers) {\n        $online = if ($PingCheck) { Test-Connection -ComputerName $c.Name -Count 1 -Quiet } else { $null }\n        [PSCustomObject]@{\n            Name        = $c.Name\n            OS          = $c.OperatingSystem\n            OSVersion   = $c.OperatingSystemVersion\n            IP          = $c.IPv4Address\n            LastLogon   = $c.LastLogonDate\n            Description = $c.Description\n            Online      = $online\n        }\n    }\n}",
+      "tags": [
+        "ad",
+        "computers",
+        "inventory",
+        "audit"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_901",
+      "type": "function",
+      "name": "Join-DomainDSI",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Intègre un poste au domaine AD DSI, le place dans l'OU appropriée et applique les GPO initiales.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom du poste à joindre"
+        },
+        {
+          "name": "TargetOU",
+          "datatype": "string",
+          "required": false,
+          "default": "$DefaultOUComputers",
+          "description": "OU de destination"
+        },
+        {
+          "name": "Credential",
+          "datatype": "PSCredential",
+          "required": true,
+          "description": "Credentials admin domaine"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Join-DomainDSI {\n    param([string]$ComputerName, [string]$TargetOU = $DefaultOUComputers, [PSCredential]$Credential)\n    Add-Computer -ComputerName $ComputerName -DomainName $DomainFQDN `\n        -Credential $Credential -OUPath $TargetOU `\n        -Options AccountCreate, JoinWithNewName -Restart -Force\n    Write-SysLog \"Poste $ComputerName intégré au domaine $DomainFQDN dans $TargetOU\"\n}",
+      "tags": [
+        "ad",
+        "domain",
+        "computers",
+        "provisioning"
+      ],
+      "throws": [
+        "COMException"
+      ]
+    },
+    {
+      "id": "fn_1000",
+      "type": "function",
+      "name": "Apply-GPODSIBaseline",
+      "language": "PowerShell",
+      "famille": "GPO",
+      "description": "Force le rafraîchissement des stratégies de groupe sur un ou plusieurs postes et vérifie l'application.",
+      "parameters": [
+        {
+          "name": "ComputerNames",
+          "datatype": "string[]",
+          "required": true,
+          "description": "Liste des postes"
+        },
+        {
+          "name": "LogonScripts",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Inclure scripts d'ouverture de session"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Résultats de l'application GPO par poste"
+      },
+      "source": "function Apply-GPODSIBaseline {\n    param([string[]]$ComputerNames, [switch]$LogonScripts)\n    foreach ($pc in $ComputerNames) {\n        try {\n            $args = if ($LogonScripts) { '/force /logoff' } else { '/force' }\n            Invoke-Command -ComputerName $pc -ScriptBlock { param($a); Start-Process gpupdate -ArgumentList $a -Wait } -ArgumentList $args\n            [PSCustomObject]@{ Computer=$pc; Status='OK'; Time=Get-Date }\n            Write-SysLog \"GPO rafraîchies sur $pc\"\n        } catch {\n            [PSCustomObject]@{ Computer=$pc; Status=\"ERROR: $_\"; Time=Get-Date }\n            Write-SysLog \"Échec GPO sur $pc : $_\" -Level 'ERROR'\n        }\n    }\n}",
+      "tags": [
+        "gpo",
+        "policy",
+        "administration"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1100",
+      "type": "function",
+      "name": "New-LocalAdminAccount",
+      "language": "PowerShell",
+      "famille": "LocalAccounts",
+      "description": "Crée un compte administrateur local sur un poste avec mot de passe sécurisé, désactive le compte 'Administrator' par défaut.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste cible"
+        },
+        {
+          "name": "Username",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom du compte local"
+        },
+        {
+          "name": "Password",
+          "datatype": "string",
+          "required": true,
+          "description": "Mot de passe du compte"
+        },
+        {
+          "name": "DisableDefault",
+          "datatype": "switch",
+          "required": false,
+          "default": "true",
+          "description": "Désactiver le compte Administrator par défaut"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function New-LocalAdminAccount {\n    param([string]$ComputerName = $env:COMPUTERNAME, [string]$Username, [string]$Password, [switch]$DisableDefault)\n    $secPwd = ConvertTo-SecureString $Password -AsPlainText -Force\n    Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n        param($u, $p, $dd)\n        $newUser = New-LocalUser -Name $u -Password $p -PasswordNeverExpires $false -ErrorAction Stop\n        Add-LocalGroupMember -Group 'Administrateurs' -Member $u\n        if ($dd) { Disable-LocalUser -Name 'Administrator' -ErrorAction SilentlyContinue }\n    } -ArgumentList $Username, $secPwd, $DisableDefault.IsPresent\n    Write-SysLog \"Compte local admin $Username créé sur $ComputerName | Default Admin désactivé : $($DisableDefault.IsPresent)\"\n}",
+      "tags": [
+        "local",
+        "admin",
+        "security",
+        "accounts"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1101",
+      "type": "function",
+      "name": "Get-LocalAdmins",
+      "language": "PowerShell",
+      "famille": "LocalAccounts",
+      "description": "Audite les membres du groupe Administrateurs local sur une liste de postes.",
+      "parameters": [
+        {
+          "name": "ComputerNames",
+          "datatype": "string[]",
+          "required": true,
+          "description": "Liste de postes à auditer"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Admins locaux par poste"
+      },
+      "source": "function Get-LocalAdmins {\n    param([string[]]$ComputerNames)\n    foreach ($pc in $ComputerNames) {\n        try {\n            $admins = Invoke-Command -ComputerName $pc -ScriptBlock {\n                Get-LocalGroupMember -Group 'Administrateurs' | Select-Object Name, PrincipalSource, ObjectClass\n            }\n            foreach ($a in $admins) {\n                [PSCustomObject]@{ Computer=$pc; Account=$a.Name; Source=$a.PrincipalSource; Type=$a.ObjectClass }\n            }\n        } catch {\n            [PSCustomObject]@{ Computer=$pc; Account='ERROR'; Source=$_.Exception.Message; Type='' }\n        }\n    }\n}",
+      "tags": [
+        "audit",
+        "local",
+        "admin",
+        "security"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1200",
+      "type": "function",
+      "name": "Invoke-RemoteScript",
+      "language": "PowerShell",
+      "famille": "Remote",
+      "description": "Exécute un script PowerShell sur un ou plusieurs postes distants via PSRemoting avec gestion d'erreurs et journal.",
+      "parameters": [
+        {
+          "name": "ComputerNames",
+          "datatype": "string[]",
+          "required": true,
+          "description": "Postes cibles"
+        },
+        {
+          "name": "ScriptBlock",
+          "datatype": "ScriptBlock",
+          "required": true,
+          "description": "Bloc de script à exécuter"
+        },
+        {
+          "name": "Arguments",
+          "datatype": "object[]",
+          "required": false,
+          "default": "@()",
+          "description": "Arguments du script"
+        },
+        {
+          "name": "ThrottleLimit",
+          "datatype": "int",
+          "required": false,
+          "default": "10",
+          "description": "Parallélisme max"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Résultats par poste {Computer, Result, Error}"
+      },
+      "source": "function Invoke-RemoteScript {\n    param(\n        [string[]]$ComputerNames,\n        [ScriptBlock]$ScriptBlock,\n        [object[]]$Arguments = @(),\n        [int]$ThrottleLimit = 10\n    )\n    $jobs = Invoke-Command -ComputerName $ComputerNames -ScriptBlock $ScriptBlock `\n        -ArgumentList $Arguments -ThrottleLimit $ThrottleLimit -AsJob\n    $results = Receive-Job $jobs -Wait -AutoRemoveJob\n    foreach ($pc in $ComputerNames) {\n        $r = $results | Where-Object { $_.PSComputerName -eq $pc }\n        if ($r) { [PSCustomObject]@{ Computer=$pc; Result=$r; Error=$null } }\n        else    { [PSCustomObject]@{ Computer=$pc; Result=$null; Error='No response' } }\n    }\n    Write-SysLog \"Script distant exécuté sur $($ComputerNames.Count) poste(s)\"\n}",
+      "tags": [
+        "remote",
+        "psremoting",
+        "automation"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_1300",
+      "type": "function",
+      "name": "Export-AuditReport",
+      "language": "PowerShell",
+      "famille": "Reporting",
+      "description": "Exporte un rapport d'audit DSI (objets PS) en fichier CSV et/ou HTML stylisé avec horodatage.",
+      "parameters": [
+        {
+          "name": "Data",
+          "datatype": "PSObject[]",
+          "required": true,
+          "description": "Données à exporter"
+        },
+        {
+          "name": "Title",
+          "datatype": "string",
+          "required": true,
+          "description": "Titre du rapport"
+        },
+        {
+          "name": "OutputDir",
+          "datatype": "string",
+          "required": false,
+          "default": "\"C:\\\\Reports\"",
+          "description": "Répertoire de sortie"
+        },
+        {
+          "name": "Format",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@('CSV','HTML')",
+          "description": "Formats : CSV | HTML | Both"
+        }
+      ],
+      "returns": {
+        "datatype": "string[]",
+        "description": "Chemins des fichiers générés"
+      },
+      "source": "function Export-AuditReport {\n    param(\n        [PSObject[]]$Data,\n        [string]$Title,\n        [string]$OutputDir = 'C:\\\\Reports',\n        [string[]]$Format = @('CSV','HTML')\n    )\n    if (-not (Test-Path $OutputDir)) { New-Item -ItemType Directory $OutputDir -Force | Out-Null }\n    $ts    = Get-Date -Format 'yyyyMMdd_HHmmss'\n    $base  = Join-Path $OutputDir \"${Title}_${ts}\"\n    $files = @()\n    if ('CSV' -in $Format) { $csv = \"$base.csv\"; $Data | Export-Csv $csv -NoTypeInformation -Encoding UTF8; $files += $csv }\n    if ('HTML' -in $Format) {\n        $html = \"$base.html\"\n        $rows = $Data | ConvertTo-Html -Title $Title -PreContent \"<h2>$Title</h2><p>Généré le $(Get-Date)</p>\" `\n            -PostContent '<style>body{font-family:Consolas;} table{border-collapse:collapse;} td,th{border:1px solid #333;padding:4px;} tr:nth-child(even){background:#f2f2f2;}</style>'\n        $rows | Out-File $html -Encoding UTF8\n        $files += $html\n    }\n    Write-SysLog \"Rapport exporté : $($files -join ' | ')\"\n    return $files\n}",
+      "tags": [
+        "reporting",
+        "export",
+        "audit",
+        "csv",
+        "html"
+      ],
+      "throws": []
+    }
+  ],
+  "variables": [
+    {
+      "id": "var_001",
+      "type": "variable",
+      "name": "inputPath",
+      "language": "PowerShell",
+      "famille": "IO",
+      "datatype": "string",
+      "default_value": "C:\\\\Temp\\\\input.txt",
+      "description": "Chemin vers le fichier d'entrée",
+      "scope": "local",
+      "tags": [
+        "filesystem",
+        "input"
+      ]
+    },
+    {
+      "id": "var_002",
+      "type": "variable",
+      "name": "maxRetries",
+      "language": "CSharp",
+      "famille": "Control",
+      "datatype": "int",
+      "default_value": "3",
+      "description": "Nombre maximum de tentatives",
+      "scope": "local",
+      "tags": [
+        "retry",
+        "control"
+      ]
+    },
+    {
+      "id": "var_010",
+      "type": "variable",
+      "name": "DomainFQDN",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "datatype": "string",
+      "default_value": "\"corp.local\"",
+      "description": "Nom de domaine FQDN de l'entreprise",
+      "scope": "global",
+      "tags": [
+        "ad",
+        "domain"
+      ]
+    },
+    {
+      "id": "var_015",
+      "type": "variable",
+      "name": "SMTPServer",
+      "language": "PowerShell",
+      "famille": "Network",
+      "datatype": "string",
+      "default_value": "\"smtp.corp.local\"",
+      "description": "Serveur SMTP interne pour les notifications",
+      "scope": "global",
+      "tags": [
+        "smtp",
+        "mail",
+        "network"
+      ]
+    },
+    {
+      "id": "var_016",
+      "type": "variable",
+      "name": "LogFilePath",
+      "language": "PowerShell",
+      "famille": "Logging",
+      "datatype": "string",
+      "default_value": "\"C:\\\\Logs\\\\SysAdmin\\\\$(Get-Date -f yyyyMMdd).log\"",
+      "description": "Chemin du fichier de log journalier",
+      "scope": "global",
+      "tags": [
+        "logging",
+        "filesystem"
+      ]
+    },
+    {
+      "id": "var_021",
+      "type": "variable",
+      "name": "CICD_API_URL",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "datatype": "string",
+      "default_value": "\"https://devops.corp.local/api\"",
+      "description": "Endpoint API du serveur CI/CD (AzureDevOps/GitLab)",
+      "scope": "global",
+      "tags": [
+        "cicd",
+        "api"
+      ]
+    },
+    {
+      "id": "var_022",
+      "type": "variable",
+      "name": "CI_CD_TOKEN",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "datatype": "string",
+      "default_value": "\"$null\"",
+      "description": "Token d'authentification pipeline (stocké en vault recommandé)",
+      "scope": "global",
+      "tags": [
+        "cicd",
+        "auth"
+      ]
+    },
+    {
+      "id": "var_023",
+      "type": "variable",
+      "name": "ContainerRegistry_URL",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "datatype": "string",
+      "default_value": "\"registry.corp.local\"",
+      "description": "URL du registre conteneurs privé",
+      "scope": "global",
+      "tags": [
+        "docker",
+        "registry"
+      ]
+    },
+    {
+      "id": "var_024",
+      "type": "variable",
+      "name": "KubeConfig_Path",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "datatype": "string",
+      "default_value": "\"C:\\K8s\\config\"",
+      "description": "Chemin vers le kubeconfig cluster",
+      "scope": "global",
+      "tags": [
+        "k8s",
+        "kubeconfig"
+      ]
+    },
+    {
+      "id": "var_025",
+      "type": "variable",
+      "name": "Terraform_Workspace",
+      "language": "PowerShell",
+      "famille": "DevOps",
+      "datatype": "string",
+      "default_value": "\"prod\"",
+      "description": "Workspace Terraform cible",
+      "scope": "global",
+      "tags": [
+        "iac",
+        "terraform"
+      ]
+    },
+    {
+      "id": "var_026",
+      "type": "variable",
+      "name": "ML_Registry_URI",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "datatype": "string",
+      "default_value": "\"https://mlregistry.corp.local/api/v1\"",
+      "description": "Endpoint API du registre de modèles ML",
+      "scope": "global",
+      "tags": [
+        "ml",
+        "registry"
+      ]
+    },
+    {
+      "id": "var_027",
+      "type": "variable",
+      "name": "Model_Training_Script",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "datatype": "string",
+      "default_value": "\"/opt/scripts/train.py\"",
+      "description": "Chemin vers le script d'entraînement sur le cluster",
+      "scope": "global",
+      "tags": [
+        "ml",
+        "training"
+      ]
+    },
+    {
+      "id": "var_028",
+      "type": "variable",
+      "name": "DriftThreshold",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "datatype": "double",
+      "default_value": "0.05",
+      "description": "Seuil de tolérance dérive modèle (PSI/KL)",
+      "scope": "global",
+      "tags": [
+        "ml",
+        "drift",
+        "monitoring"
+      ]
+    },
+    {
+      "id": "var_003",
+      "type": "variable",
+      "name": "logLevel",
+      "language": "CSharp",
+      "famille": "Logging",
+      "datatype": "string",
+      "default_value": "\"INFO\"",
+      "description": "Niveau de journalisation",
+      "scope": "global",
+      "tags": [
+        "logging"
+      ]
+    },
+    {
+      "id": "var_004",
+      "type": "variable",
+      "name": "outputDir",
+      "language": "PowerShell",
+      "famille": "IO",
+      "datatype": "string",
+      "default_value": "C:\\\\Temp\\\\output",
+      "description": "Répertoire de sortie",
+      "scope": "local",
+      "tags": [
+        "filesystem",
+        "output"
+      ]
+    },
+    {
+      "id": "var_011",
+      "type": "variable",
+      "name": "DomainController",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "datatype": "string",
+      "default_value": "\"DC01.corp.local\"",
+      "description": "Nom du contrôleur de domaine principal",
+      "scope": "global",
+      "tags": [
+        "ad",
+        "dc"
+      ]
+    },
+    {
+      "id": "var_012",
+      "type": "variable",
+      "name": "DefaultOUUsers",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "datatype": "string",
+      "default_value": "\"OU=Utilisateurs,DC=corp,DC=local\"",
+      "description": "OU par défaut pour la création d'utilisateurs",
+      "scope": "global",
+      "tags": [
+        "ad",
+        "ou",
+        "users"
+      ]
+    },
+    {
+      "id": "var_013",
+      "type": "variable",
+      "name": "DefaultOUComputers",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "datatype": "string",
+      "default_value": "\"OU=Postes,DC=corp,DC=local\"",
+      "description": "OU par défaut pour les objets ordinateurs",
+      "scope": "global",
+      "tags": [
+        "ad",
+        "ou",
+        "computers"
+      ]
+    },
+    {
+      "id": "var_014",
+      "type": "variable",
+      "name": "AdminGroup",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "datatype": "string",
+      "default_value": "\"GRP_Admins_SI\"",
+      "description": "Groupe AD des administrateurs système",
+      "scope": "global",
+      "tags": [
+        "ad",
+        "group",
+        "admin"
+      ]
+    },
+    {
+      "id": "var_017",
+      "type": "variable",
+      "name": "WsusServer",
+      "language": "PowerShell",
+      "famille": "Updates",
+      "datatype": "string",
+      "default_value": "\"wsus.corp.local\"",
+      "description": "Serveur WSUS de référence",
+      "scope": "global",
+      "tags": [
+        "wsus",
+        "updates"
+      ]
+    },
+    {
+      "id": "var_018",
+      "type": "variable",
+      "name": "BackupRoot",
+      "language": "PowerShell",
+      "famille": "Backup",
+      "datatype": "string",
+      "default_value": "\"\\\\\\\\NAS01\\\\Backups\"",
+      "description": "Racine du partage de sauvegarde réseau",
+      "scope": "global",
+      "tags": [
+        "backup",
+        "network",
+        "share"
+      ]
+    },
+    {
+      "id": "var_019",
+      "type": "variable",
+      "name": "MaxPasswordAgeDays",
+      "language": "PowerShell",
+      "famille": "Security",
+      "datatype": "int",
+      "default_value": "90",
+      "description": "Durée maximale de validité d'un mot de passe (jours)",
+      "scope": "global",
+      "tags": [
+        "security",
+        "password",
+        "policy"
+      ]
+    },
+    {
+      "id": "var_020",
+      "type": "variable",
+      "name": "CriticalEventIDs",
+      "language": "PowerShell",
+      "famille": "Monitoring",
+      "datatype": "int[]",
+      "default_value": "@(4625,4740,4768,4769,7036,1074,6008)",
+      "description": "IDs EventLog critiques à surveiller (sécurité, services, arrêts)",
+      "scope": "global",
+      "tags": [
+        "eventlog",
+        "monitoring",
+        "security"
+      ]
+    }
+  ]
+}
