@@ -1,0 +1,207 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_201",
+        "type": "function",
+        "name": "Disable-ADUserDSI",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "description": "Désactive un compte AD, révoque ses groupes, déplace en archive",
+        "parameters": [
+          { "name": "SamAccountName", "datatype": "string", "required": true },
+          { "name": "Reason", "datatype": "string", "required": true },
+          { "name": "ArchiveOU", "datatype": "string", "required": false, "default": "\"OU=Archives,DC=corp,DC=local\"" }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["ad", "users", "disable", "offboarding"]
+      },
+      {
+        "id": "fn_1101",
+        "type": "function",
+        "name": "Get-LocalAdmins",
+        "language": "PowerShell",
+        "famille": "LocalAccounts",
+        "description": "Audite les membres du groupe Administrateurs local sur une liste de postes",
+        "parameters": [
+          { "name": "ComputerNames", "datatype": "string[]", "required": true }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Admins locaux par poste" },
+        "tags": ["audit", "local", "admin", "security"]
+      },
+      {
+        "id": "fn_1300",
+        "type": "function",
+        "name": "Export-AuditReport",
+        "language": "PowerShell",
+        "famille": "Reporting",
+        "description": "Exporte un rapport d'audit DSI en CSV/HTML",
+        "parameters": [
+          { "name": "Data", "datatype": "PSObject[]", "required": true },
+          { "name": "Title", "datatype": "string", "required": true },
+          { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+          { "name": "Format", "datatype": "string[]", "required": false, "default": "@('CSV','HTML')" }
+        ],
+        "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+        "tags": ["reporting", "export", "csv", "html"]
+      },
+      {
+        "id": "fn_100",
+        "type": "function",
+        "name": "Write-SysLog",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Journalise un message horodaté",
+        "parameters": [
+          { "name": "Message", "datatype": "string", "required": true },
+          { "name": "Level", "datatype": "string", "required": false, "default": "INFO" }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["logging"]
+      }
+    ],
+    "variables": [
+      {
+        "id": "var_016",
+        "type": "variable",
+        "name": "LogFilePath",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "datatype": "string",
+        "default_value": "\"C:\\\\Logs\\\\SysAdmin\\\\$(Get-Date -f yyyyMMdd).log\"",
+        "description": "Fichier log journalier",
+        "scope": "global",
+        "tags": ["logging"]
+      }
+    ]
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "off_v01",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 60 },
+        "data": {
+          "id": "var_016",
+          "type": "variable",
+          "name": "LogFilePath",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "datatype": "string",
+          "default_value": "\"C:\\\\Logs\\\\SysAdmin\\\\$(Get-Date -f yyyyMMdd).log\"",
+          "description": "Fichier log journalier",
+          "scope": "global",
+          "tags": ["logging"]
+        }
+      },
+      {
+        "block_id": "off_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 340, "y": 60 },
+        "data": {
+          "id": "fn_201",
+          "type": "function",
+          "name": "Disable-ADUserDSI",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "description": "Désactive un compte AD, révoque ses groupes, déplace en archive",
+          "parameters": [
+            { "name": "SamAccountName", "datatype": "string", "required": true },
+            { "name": "Reason", "datatype": "string", "required": true },
+            { "name": "ArchiveOU", "datatype": "string", "required": false, "default": "\"OU=Archives,DC=corp,DC=local\"" }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["ad", "users", "disable", "offboarding"]
+        }
+      },
+      {
+        "block_id": "off_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 680, "y": 60 },
+        "data": {
+          "id": "fn_1101",
+          "type": "function",
+          "name": "Get-LocalAdmins",
+          "language": "PowerShell",
+          "famille": "LocalAccounts",
+          "description": "Audite les membres du groupe Administrateurs local sur une liste de postes",
+          "parameters": [
+            { "name": "ComputerNames", "datatype": "string[]", "required": true }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Admins locaux par poste" },
+          "tags": ["audit", "local", "admin", "security"]
+        }
+      },
+      {
+        "block_id": "off_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1020, "y": 60 },
+        "data": {
+          "id": "fn_1300",
+          "type": "function",
+          "name": "Export-AuditReport",
+          "language": "PowerShell",
+          "famille": "Reporting",
+          "description": "Exporte un rapport d'audit DSI en CSV/HTML",
+          "parameters": [
+            { "name": "Data", "datatype": "PSObject[]", "required": true },
+            { "name": "Title", "datatype": "string", "required": true },
+            { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+            { "name": "Format", "datatype": "string[]", "required": false, "default": "@('CSV','HTML')" }
+          ],
+          "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+          "tags": ["reporting", "export", "csv", "html"]
+        }
+      },
+      {
+        "block_id": "off_f04",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1360, "y": 60 },
+        "data": {
+          "id": "fn_100",
+          "type": "function",
+          "name": "Write-SysLog",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Journalise un message horodaté",
+          "parameters": [
+            { "name": "Message", "datatype": "string", "required": true },
+            { "name": "Level", "datatype": "string", "required": false, "default": "INFO" }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["logging"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "off_v01", "src_port": "LogFilePath", "tgt_block": "off_f04", "tgt_port": "LogFile" },
+      { "src_block": "off_f01", "src_port": "flow_out", "tgt_block": "off_f02", "tgt_port": "flow_in" },
+      { "src_block": "off_f02", "src_port": "flow_out", "tgt_block": "off_f03", "tgt_port": "flow_in" },
+      { "src_block": "off_f02", "src_port": "return", "tgt_block": "off_f03", "tgt_port": "Data" },
+      { "src_block": "off_f03", "src_port": "flow_out", "tgt_block": "off_f04", "tgt_port": "flow_in" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "Offboarding_DepartEmploye",
+    "code": ""
+  }
+}

@@ -1,0 +1,318 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_205",
+        "type": "function",
+        "name": "Get-StaleADAccounts",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "description": "Identifie les comptes AD inactifs depuis > N jours",
+        "parameters": [
+          { "name": "InactiveDays", "datatype": "int", "required": false, "default": "90" },
+          { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUUsers" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Comptes inactifs" },
+        "tags": ["ad", "audit", "security", "cleanup"]
+      },
+      {
+        "id": "fn_601",
+        "type": "function",
+        "name": "Get-DiskHealth",
+        "language": "PowerShell",
+        "famille": "Inventory",
+        "description": "Vérifie l'espace disponible sur les volumes avec seuil d'alerte",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+          { "name": "ThresholdPct", "datatype": "int", "required": false, "default": "15" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "État des volumes" },
+        "tags": ["disk", "health", "monitoring"]
+      },
+      {
+        "id": "fn_701",
+        "type": "function",
+        "name": "Get-ServiceHealth",
+        "language": "PowerShell",
+        "famille": "Services",
+        "description": "Vérifie l'état des services critiques",
+        "parameters": [
+          { "name": "CriticalServices", "datatype": "string[]", "required": true },
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+          { "name": "AlertEmail", "datatype": "string", "required": false, "default": "\"\"" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "État services" },
+        "tags": ["services", "monitoring"]
+      },
+      {
+        "id": "fn_800",
+        "type": "function",
+        "name": "Get-SecurityEvents",
+        "language": "PowerShell",
+        "famille": "Security",
+        "description": "Collecte les événements sécurité de la semaine",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$DomainController" },
+          { "name": "EventIDs", "datatype": "int[]", "required": false, "default": "$CriticalEventIDs" },
+          { "name": "HoursBack", "datatype": "int", "required": false, "default": "168" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Événements collectés" },
+        "tags": ["security", "eventlog", "audit"]
+      },
+      {
+        "id": "fn_1300",
+        "type": "function",
+        "name": "Export-AuditReport",
+        "language": "PowerShell",
+        "famille": "Reporting",
+        "description": "Exporte le rapport hebdo consolidé en HTML",
+        "parameters": [
+          { "name": "Data", "datatype": "PSObject[]", "required": true },
+          { "name": "Title", "datatype": "string", "required": true },
+          { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+          { "name": "Format", "datatype": "string[]", "required": false, "default": "@('HTML')" }
+        ],
+        "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+        "tags": ["reporting", "export", "html"]
+      },
+      {
+        "id": "fn_101",
+        "type": "function",
+        "name": "Send-AlertMail",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Envoie le rapport hebdo à la direction DSI",
+        "parameters": [
+          { "name": "To", "datatype": "string", "required": true },
+          { "name": "Subject", "datatype": "string", "required": true },
+          { "name": "Body", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "bool", "description": "Succès envoi" },
+        "tags": ["mail", "alert"]
+      }
+    ],
+    "variables": [
+      {
+        "id": "var_012",
+        "type": "variable",
+        "name": "DefaultOUUsers",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "datatype": "string",
+        "default_value": "\"OU=Utilisateurs,DC=corp,DC=local\"",
+        "description": "OU utilisateurs",
+        "scope": "global",
+        "tags": ["ad", "ou"]
+      },
+      {
+        "id": "var_020",
+        "type": "variable",
+        "name": "CriticalEventIDs",
+        "language": "PowerShell",
+        "famille": "Monitoring",
+        "datatype": "int[]",
+        "default_value": "@(4625,4740,4768,4769,7036,1074,6008)",
+        "description": "EventIDs critiques",
+        "scope": "global",
+        "tags": ["eventlog"]
+      }
+    ]
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "ah_v01",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 40 },
+        "data": {
+          "id": "var_012",
+          "type": "variable",
+          "name": "DefaultOUUsers",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "datatype": "string",
+          "default_value": "\"OU=Utilisateurs,DC=corp,DC=local\"",
+          "description": "OU utilisateurs",
+          "scope": "global",
+          "tags": ["ad", "ou"]
+        }
+      },
+      {
+        "block_id": "ah_v02",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 140 },
+        "data": {
+          "id": "var_020",
+          "type": "variable",
+          "name": "CriticalEventIDs",
+          "language": "PowerShell",
+          "famille": "Monitoring",
+          "datatype": "int[]",
+          "default_value": "@(4625,4740,4768,4769,7036,1074,6008)",
+          "description": "EventIDs critiques",
+          "scope": "global",
+          "tags": ["eventlog"]
+        }
+      },
+      {
+        "block_id": "ah_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 360, "y": 40 },
+        "data": {
+          "id": "fn_205",
+          "type": "function",
+          "name": "Get-StaleADAccounts",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "description": "Identifie les comptes AD inactifs depuis > N jours",
+          "parameters": [
+            { "name": "InactiveDays", "datatype": "int", "required": false, "default": "90" },
+            { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUUsers" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Comptes inactifs" },
+          "tags": ["ad", "audit", "security", "cleanup"]
+        }
+      },
+      {
+        "block_id": "ah_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 360, "y": 220 },
+        "data": {
+          "id": "fn_601",
+          "type": "function",
+          "name": "Get-DiskHealth",
+          "language": "PowerShell",
+          "famille": "Inventory",
+          "description": "Vérifie l'espace disponible sur les volumes avec seuil d'alerte",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+            { "name": "ThresholdPct", "datatype": "int", "required": false, "default": "15" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "État des volumes" },
+          "tags": ["disk", "health", "monitoring"]
+        }
+      },
+      {
+        "block_id": "ah_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 360, "y": 400 },
+        "data": {
+          "id": "fn_701",
+          "type": "function",
+          "name": "Get-ServiceHealth",
+          "language": "PowerShell",
+          "famille": "Services",
+          "description": "Vérifie l'état des services critiques",
+          "parameters": [
+            { "name": "CriticalServices", "datatype": "string[]", "required": true },
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+            { "name": "AlertEmail", "datatype": "string", "required": false, "default": "\"\"" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "État services" },
+          "tags": ["services", "monitoring"]
+        }
+      },
+      {
+        "block_id": "ah_f04",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 360, "y": 580 },
+        "data": {
+          "id": "fn_800",
+          "type": "function",
+          "name": "Get-SecurityEvents",
+          "language": "PowerShell",
+          "famille": "Security",
+          "description": "Collecte les événements sécurité de la semaine",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$DomainController" },
+            { "name": "EventIDs", "datatype": "int[]", "required": false, "default": "$CriticalEventIDs" },
+            { "name": "HoursBack", "datatype": "int", "required": false, "default": "168" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Événements collectés" },
+          "tags": ["security", "eventlog", "audit"]
+        }
+      },
+      {
+        "block_id": "ah_f05",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 840, "y": 300 },
+        "data": {
+          "id": "fn_1300",
+          "type": "function",
+          "name": "Export-AuditReport",
+          "language": "PowerShell",
+          "famille": "Reporting",
+          "description": "Exporte le rapport hebdo consolidé en HTML",
+          "parameters": [
+            { "name": "Data", "datatype": "PSObject[]", "required": true },
+            { "name": "Title", "datatype": "string", "required": true },
+            { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+            { "name": "Format", "datatype": "string[]", "required": false, "default": "@('HTML')" }
+          ],
+          "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+          "tags": ["reporting", "export", "html"]
+        }
+      },
+      {
+        "block_id": "ah_f06",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1180, "y": 300 },
+        "data": {
+          "id": "fn_101",
+          "type": "function",
+          "name": "Send-AlertMail",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Envoie le rapport hebdo à la direction DSI",
+          "parameters": [
+            { "name": "To", "datatype": "string", "required": true },
+            { "name": "Subject", "datatype": "string", "required": true },
+            { "name": "Body", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "bool", "description": "Succès envoi" },
+          "tags": ["mail", "alert"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "ah_v01", "src_port": "DefaultOUUsers", "tgt_block": "ah_f01", "tgt_port": "SearchBase" },
+      { "src_block": "ah_v02", "src_port": "CriticalEventIDs", "tgt_block": "ah_f04", "tgt_port": "EventIDs" },
+      { "src_block": "ah_f01", "src_port": "flow_out", "tgt_block": "ah_f02", "tgt_port": "flow_in" },
+      { "src_block": "ah_f02", "src_port": "flow_out", "tgt_block": "ah_f03", "tgt_port": "flow_in" },
+      { "src_block": "ah_f03", "src_port": "flow_out", "tgt_block": "ah_f04", "tgt_port": "flow_in" },
+      { "src_block": "ah_f04", "src_port": "flow_out", "tgt_block": "ah_f05", "tgt_port": "flow_in" },
+      { "src_block": "ah_f01", "src_port": "return", "tgt_block": "ah_f05", "tgt_port": "Data" },
+      { "src_block": "ah_f05", "src_port": "flow_out", "tgt_block": "ah_f06", "tgt_port": "flow_in" },
+      { "src_block": "ah_f05", "src_port": "return", "tgt_block": "ah_f06", "tgt_port": "Body" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "AuditHebdomadaire_DSI",
+    "code": ""
+  }
+}

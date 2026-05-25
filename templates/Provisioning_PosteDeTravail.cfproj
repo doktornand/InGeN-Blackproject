@@ -1,0 +1,314 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_901",
+        "type": "function",
+        "name": "Join-DomainDSI",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "description": "Intègre un poste au domaine AD DSI",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": true },
+          { "name": "TargetOU", "datatype": "string", "required": false, "default": "$DefaultOUComputers" },
+          { "name": "Credential", "datatype": "PSCredential", "required": true }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["ad", "domain", "computers", "provisioning"]
+      },
+      {
+        "id": "fn_1100",
+        "type": "function",
+        "name": "New-LocalAdminAccount",
+        "language": "PowerShell",
+        "famille": "LocalAccounts",
+        "description": "Crée un compte admin local DSI sur le poste",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+          { "name": "Username", "datatype": "string", "required": true },
+          { "name": "Password", "datatype": "string", "required": true },
+          { "name": "DisableDefault", "datatype": "switch", "required": false, "default": "true" }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["local", "admin", "security", "accounts"]
+      },
+      {
+        "id": "fn_1000",
+        "type": "function",
+        "name": "Apply-GPODSIBaseline",
+        "language": "PowerShell",
+        "famille": "GPO",
+        "description": "Force le rafraîchissement GPO sur le poste",
+        "parameters": [
+          { "name": "ComputerNames", "datatype": "string[]", "required": true },
+          { "name": "LogonScripts", "datatype": "switch", "required": false, "default": "false" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Résultats GPO" },
+        "tags": ["gpo", "policy"]
+      },
+      {
+        "id": "fn_500",
+        "type": "function",
+        "name": "Test-NetworkDiag",
+        "language": "PowerShell",
+        "famille": "Network",
+        "description": "Diagnostic réseau complet : ping, DNS, port",
+        "parameters": [
+          { "name": "Target", "datatype": "string", "required": true },
+          { "name": "Port", "datatype": "int", "required": false, "default": "443" },
+          { "name": "DnsServer", "datatype": "string", "required": false, "default": "\"\"" }
+        ],
+        "returns": { "datatype": "PSObject", "description": "Rapport diagnostic" },
+        "tags": ["network", "diagnostic", "ping"]
+      },
+      {
+        "id": "fn_600",
+        "type": "function",
+        "name": "Get-SystemInventory",
+        "language": "PowerShell",
+        "famille": "Inventory",
+        "description": "Collecte l'inventaire matériel et logiciel complet",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+          { "name": "IncludeSoftware", "datatype": "switch", "required": false, "default": "true" }
+        ],
+        "returns": { "datatype": "PSObject", "description": "Inventaire complet" },
+        "tags": ["inventory", "audit", "hardware"]
+      },
+      {
+        "id": "fn_100",
+        "type": "function",
+        "name": "Write-SysLog",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Journalise la fin du provisioning",
+        "parameters": [
+          { "name": "Message", "datatype": "string", "required": true },
+          { "name": "Level", "datatype": "string", "required": false, "default": "INFO" }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["logging"]
+      }
+    ],
+    "variables": [
+      {
+        "id": "var_010",
+        "type": "variable",
+        "name": "DomainFQDN",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "datatype": "string",
+        "default_value": "\"corp.local\"",
+        "description": "FQDN domaine",
+        "scope": "global",
+        "tags": ["ad", "domain"]
+      },
+      {
+        "id": "var_013",
+        "type": "variable",
+        "name": "DefaultOUComputers",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "datatype": "string",
+        "default_value": "\"OU=Postes,DC=corp,DC=local\"",
+        "description": "OU postes",
+        "scope": "global",
+        "tags": ["ad", "ou", "computers"]
+      }
+    ]
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "pv_v01",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 40 },
+        "data": {
+          "id": "var_010",
+          "type": "variable",
+          "name": "DomainFQDN",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "datatype": "string",
+          "default_value": "\"corp.local\"",
+          "description": "FQDN domaine",
+          "scope": "global",
+          "tags": ["ad", "domain"]
+        }
+      },
+      {
+        "block_id": "pv_v02",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 140 },
+        "data": {
+          "id": "var_013",
+          "type": "variable",
+          "name": "DefaultOUComputers",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "datatype": "string",
+          "default_value": "\"OU=Postes,DC=corp,DC=local\"",
+          "description": "OU postes",
+          "scope": "global",
+          "tags": ["ad", "ou", "computers"]
+        }
+      },
+      {
+        "block_id": "pv_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 360, "y": 60 },
+        "data": {
+          "id": "fn_901",
+          "type": "function",
+          "name": "Join-DomainDSI",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "description": "Intègre un poste au domaine AD DSI",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": true },
+            { "name": "TargetOU", "datatype": "string", "required": false, "default": "$DefaultOUComputers" },
+            { "name": "Credential", "datatype": "PSCredential", "required": true }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["ad", "domain", "computers", "provisioning"]
+        }
+      },
+      {
+        "block_id": "pv_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 700, "y": 60 },
+        "data": {
+          "id": "fn_1100",
+          "type": "function",
+          "name": "New-LocalAdminAccount",
+          "language": "PowerShell",
+          "famille": "LocalAccounts",
+          "description": "Crée un compte admin local DSI sur le poste",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+            { "name": "Username", "datatype": "string", "required": true },
+            { "name": "Password", "datatype": "string", "required": true },
+            { "name": "DisableDefault", "datatype": "switch", "required": false, "default": "true" }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["local", "admin", "security", "accounts"]
+        }
+      },
+      {
+        "block_id": "pv_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1040, "y": 60 },
+        "data": {
+          "id": "fn_1000",
+          "type": "function",
+          "name": "Apply-GPODSIBaseline",
+          "language": "PowerShell",
+          "famille": "GPO",
+          "description": "Force le rafraîchissement GPO sur le poste",
+          "parameters": [
+            { "name": "ComputerNames", "datatype": "string[]", "required": true },
+            { "name": "LogonScripts", "datatype": "switch", "required": false, "default": "false" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Résultats GPO" },
+          "tags": ["gpo", "policy"]
+        }
+      },
+      {
+        "block_id": "pv_f04",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1040, "y": 260 },
+        "data": {
+          "id": "fn_500",
+          "type": "function",
+          "name": "Test-NetworkDiag",
+          "language": "PowerShell",
+          "famille": "Network",
+          "description": "Diagnostic réseau complet : ping, DNS, port",
+          "parameters": [
+            { "name": "Target", "datatype": "string", "required": true },
+            { "name": "Port", "datatype": "int", "required": false, "default": "443" },
+            { "name": "DnsServer", "datatype": "string", "required": false, "default": "\"\"" }
+          ],
+          "returns": { "datatype": "PSObject", "description": "Rapport diagnostic" },
+          "tags": ["network", "diagnostic", "ping"]
+        }
+      },
+      {
+        "block_id": "pv_f05",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1380, "y": 160 },
+        "data": {
+          "id": "fn_600",
+          "type": "function",
+          "name": "Get-SystemInventory",
+          "language": "PowerShell",
+          "famille": "Inventory",
+          "description": "Collecte l'inventaire matériel et logiciel complet",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+            { "name": "IncludeSoftware", "datatype": "switch", "required": false, "default": "true" }
+          ],
+          "returns": { "datatype": "PSObject", "description": "Inventaire complet" },
+          "tags": ["inventory", "audit", "hardware"]
+        }
+      },
+      {
+        "block_id": "pv_f06",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1720, "y": 160 },
+        "data": {
+          "id": "fn_100",
+          "type": "function",
+          "name": "Write-SysLog",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Journalise la fin du provisioning",
+          "parameters": [
+            { "name": "Message", "datatype": "string", "required": true },
+            { "name": "Level", "datatype": "string", "required": false, "default": "INFO" }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["logging"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "pv_v02", "src_port": "DefaultOUComputers", "tgt_block": "pv_f01", "tgt_port": "TargetOU" },
+      { "src_block": "pv_f01", "src_port": "flow_out", "tgt_block": "pv_f02", "tgt_port": "flow_in" },
+      { "src_block": "pv_f02", "src_port": "flow_out", "tgt_block": "pv_f03", "tgt_port": "flow_in" },
+      { "src_block": "pv_f03", "src_port": "flow_out", "tgt_block": "pv_f04", "tgt_port": "flow_in" },
+      { "src_block": "pv_f04", "src_port": "flow_out", "tgt_block": "pv_f05", "tgt_port": "flow_in" },
+      { "src_block": "pv_f05", "src_port": "flow_out", "tgt_block": "pv_f06", "tgt_port": "flow_in" },
+      { "src_block": "pv_f05", "src_port": "return", "tgt_block": "pv_f06", "tgt_port": "Message" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "Provisioning_PosteDeTravail",
+    "code": ""
+  }
+}

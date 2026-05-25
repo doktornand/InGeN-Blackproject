@@ -1,0 +1,244 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_200",
+        "type": "function",
+        "name": "New-ADUserDSI",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "description": "Crée un compte utilisateur AD avec conventions DSI",
+        "parameters": [
+          { "name": "GivenName", "datatype": "string", "required": true },
+          { "name": "Surname", "datatype": "string", "required": true },
+          { "name": "Department", "datatype": "string", "required": true },
+          { "name": "OU", "datatype": "string", "required": false, "default": "$DefaultOUUsers" },
+          { "name": "BaseGroups", "datatype": "string[]", "required": false, "default": "@('GRP_Utilisateurs')" },
+          { "name": "TempPassword", "datatype": "string", "required": false, "default": "\"P@ss_Temp2025!\"" }
+        ],
+        "returns": { "datatype": "ADUser", "description": "Objet ADUser créé" },
+        "tags": ["ad", "users", "create"]
+      },
+      {
+        "id": "fn_101",
+        "type": "function",
+        "name": "Send-AlertMail",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Envoie un email d'alerte via SMTP interne DSI",
+        "parameters": [
+          { "name": "To", "datatype": "string", "required": true },
+          { "name": "Subject", "datatype": "string", "required": true },
+          { "name": "Body", "datatype": "string", "required": true },
+          { "name": "From", "datatype": "string", "required": false, "default": "noreply@corp.local" }
+        ],
+        "returns": { "datatype": "bool", "description": "Succès envoi" },
+        "tags": ["mail", "alert"]
+      },
+      {
+        "id": "fn_100",
+        "type": "function",
+        "name": "Write-SysLog",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Journalise un message horodaté",
+        "parameters": [
+          { "name": "Message", "datatype": "string", "required": true },
+          { "name": "Level", "datatype": "string", "required": false, "default": "INFO" },
+          { "name": "LogFile", "datatype": "string", "required": false, "default": "$LogFilePath" }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["logging"]
+      }
+    ],
+    "variables": [
+      {
+        "id": "var_010",
+        "type": "variable",
+        "name": "DomainFQDN",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "datatype": "string",
+        "default_value": "\"corp.local\"",
+        "description": "Nom de domaine FQDN",
+        "scope": "global",
+        "tags": ["ad", "domain"]
+      },
+      {
+        "id": "var_012",
+        "type": "variable",
+        "name": "DefaultOUUsers",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "datatype": "string",
+        "default_value": "\"OU=Utilisateurs,DC=corp,DC=local\"",
+        "description": "OU par défaut utilisateurs",
+        "scope": "global",
+        "tags": ["ad", "ou"]
+      },
+      {
+        "id": "var_015",
+        "type": "variable",
+        "name": "SMTPServer",
+        "language": "PowerShell",
+        "famille": "Network",
+        "datatype": "string",
+        "default_value": "\"smtp.corp.local\"",
+        "description": "Serveur SMTP interne",
+        "scope": "global",
+        "tags": ["smtp", "mail"]
+      }
+    ]
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "ob_v01",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 60 },
+        "data": {
+          "id": "var_010",
+          "type": "variable",
+          "name": "DomainFQDN",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "datatype": "string",
+          "default_value": "\"corp.local\"",
+          "description": "Nom de domaine FQDN",
+          "scope": "global",
+          "tags": ["ad", "domain"]
+        }
+      },
+      {
+        "block_id": "ob_v02",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 160 },
+        "data": {
+          "id": "var_012",
+          "type": "variable",
+          "name": "DefaultOUUsers",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "datatype": "string",
+          "default_value": "\"OU=Utilisateurs,DC=corp,DC=local\"",
+          "description": "OU par défaut utilisateurs",
+          "scope": "global",
+          "tags": ["ad", "ou"]
+        }
+      },
+      {
+        "block_id": "ob_v03",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 260 },
+        "data": {
+          "id": "var_015",
+          "type": "variable",
+          "name": "SMTPServer",
+          "language": "PowerShell",
+          "famille": "Network",
+          "datatype": "string",
+          "default_value": "\"smtp.corp.local\"",
+          "description": "Serveur SMTP interne",
+          "scope": "global",
+          "tags": ["smtp", "mail"]
+        }
+      },
+      {
+        "block_id": "ob_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 380, "y": 80 },
+        "data": {
+          "id": "fn_200",
+          "type": "function",
+          "name": "New-ADUserDSI",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "description": "Crée un compte utilisateur AD avec conventions DSI",
+          "parameters": [
+            { "name": "GivenName", "datatype": "string", "required": true },
+            { "name": "Surname", "datatype": "string", "required": true },
+            { "name": "Department", "datatype": "string", "required": true },
+            { "name": "OU", "datatype": "string", "required": false, "default": "$DefaultOUUsers" },
+            { "name": "BaseGroups", "datatype": "string[]", "required": false, "default": "@('GRP_Utilisateurs')" },
+            { "name": "TempPassword", "datatype": "string", "required": false, "default": "\"P@ss_Temp2025!\"" }
+          ],
+          "returns": { "datatype": "ADUser", "description": "Objet ADUser créé" },
+          "tags": ["ad", "users", "create"]
+        }
+      },
+      {
+        "block_id": "ob_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 720, "y": 80 },
+        "data": {
+          "id": "fn_101",
+          "type": "function",
+          "name": "Send-AlertMail",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Envoie un email d'alerte via SMTP interne DSI",
+          "parameters": [
+            { "name": "To", "datatype": "string", "required": true },
+            { "name": "Subject", "datatype": "string", "required": true },
+            { "name": "Body", "datatype": "string", "required": true },
+            { "name": "From", "datatype": "string", "required": false, "default": "noreply@corp.local" }
+          ],
+          "returns": { "datatype": "bool", "description": "Succès envoi" },
+          "tags": ["mail", "alert"]
+        }
+      },
+      {
+        "block_id": "ob_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1060, "y": 80 },
+        "data": {
+          "id": "fn_100",
+          "type": "function",
+          "name": "Write-SysLog",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Journalise un message horodaté",
+          "parameters": [
+            { "name": "Message", "datatype": "string", "required": true },
+            { "name": "Level", "datatype": "string", "required": false, "default": "INFO" },
+            { "name": "LogFile", "datatype": "string", "required": false, "default": "$LogFilePath" }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["logging"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "ob_v01", "src_port": "DomainFQDN", "tgt_block": "ob_f01", "tgt_port": "GivenName" },
+      { "src_block": "ob_v02", "src_port": "DefaultOUUsers", "tgt_block": "ob_f01", "tgt_port": "OU" },
+      { "src_block": "ob_f01", "src_port": "flow_out", "tgt_block": "ob_f02", "tgt_port": "flow_in" },
+      { "src_block": "ob_f01", "src_port": "return", "tgt_block": "ob_f02", "tgt_port": "Body" },
+      { "src_block": "ob_f02", "src_port": "flow_out", "tgt_block": "ob_f03", "tgt_port": "flow_in" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "Onboarding_NouvelEmploye",
+    "code": ""
+  }
+}

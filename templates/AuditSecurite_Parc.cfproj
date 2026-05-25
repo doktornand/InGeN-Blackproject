@@ -1,0 +1,251 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_900",
+        "type": "function",
+        "name": "Get-ADComputersList",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "description": "Retourne la liste des ordinateurs AD d'une OU",
+        "parameters": [
+          { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUComputers" },
+          { "name": "PingCheck", "datatype": "switch", "required": false, "default": "false" },
+          { "name": "OSFilter", "datatype": "string", "required": false, "default": "\"*\"" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Liste des ordinateurs" },
+        "tags": ["ad", "computers", "inventory"]
+      },
+      {
+        "id": "fn_802",
+        "type": "function",
+        "name": "Invoke-SecurityBaseline",
+        "language": "PowerShell",
+        "famille": "Security",
+        "description": "Vérifie la conformité sécurité DSI d'un poste",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" }
+        ],
+        "returns": { "datatype": "PSObject", "description": "Rapport conformité" },
+        "tags": ["security", "baseline", "compliance"]
+      },
+      {
+        "id": "fn_1101",
+        "type": "function",
+        "name": "Get-LocalAdmins",
+        "language": "PowerShell",
+        "famille": "LocalAccounts",
+        "description": "Audite les membres du groupe Administrateurs local sur une liste de postes",
+        "parameters": [
+          { "name": "ComputerNames", "datatype": "string[]", "required": true }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Admins locaux par poste" },
+        "tags": ["audit", "local", "admin", "security"]
+      },
+      {
+        "id": "fn_502",
+        "type": "function",
+        "name": "Get-OpenPorts",
+        "language": "PowerShell",
+        "famille": "Network",
+        "description": "Liste les ports TCP/UDP en écoute avec processus",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+          { "name": "Protocol", "datatype": "string", "required": false, "default": "\"TCP\"" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Ports ouverts" },
+        "tags": ["network", "security", "ports"]
+      },
+      {
+        "id": "fn_1300",
+        "type": "function",
+        "name": "Export-AuditReport",
+        "language": "PowerShell",
+        "famille": "Reporting",
+        "description": "Exporte un rapport d'audit DSI en CSV/HTML",
+        "parameters": [
+          { "name": "Data", "datatype": "PSObject[]", "required": true },
+          { "name": "Title", "datatype": "string", "required": true },
+          { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+          { "name": "Format", "datatype": "string[]", "required": false, "default": "@('CSV','HTML')" }
+        ],
+        "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+        "tags": ["reporting", "export"]
+      }
+    ],
+    "variables": [
+      {
+        "id": "var_013",
+        "type": "variable",
+        "name": "DefaultOUComputers",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "datatype": "string",
+        "default_value": "\"OU=Postes,DC=corp,DC=local\"",
+        "description": "OU postes",
+        "scope": "global",
+        "tags": ["ad", "ou", "computers"]
+      }
+    ]
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "sec_v01",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 60 },
+        "data": {
+          "id": "var_013",
+          "type": "variable",
+          "name": "DefaultOUComputers",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "datatype": "string",
+          "default_value": "\"OU=Postes,DC=corp,DC=local\"",
+          "description": "OU postes",
+          "scope": "global",
+          "tags": ["ad", "ou", "computers"]
+        }
+      },
+      {
+        "block_id": "sec_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 340, "y": 40 },
+        "data": {
+          "id": "fn_900",
+          "type": "function",
+          "name": "Get-ADComputersList",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "description": "Retourne la liste des ordinateurs AD d'une OU",
+          "parameters": [
+            { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUComputers" },
+            { "name": "PingCheck", "datatype": "switch", "required": false, "default": "false" },
+            { "name": "OSFilter", "datatype": "string", "required": false, "default": "\"*\"" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Liste des ordinateurs" },
+          "tags": ["ad", "computers", "inventory"]
+        }
+      },
+      {
+        "block_id": "sec_ctrl01",
+        "block_type": "control",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 680, "y": 40 },
+        "data": { "structure": "foreach", "description": "Pour chaque poste AD trouvé" }
+      },
+      {
+        "block_id": "sec_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 900, "y": 40 },
+        "data": {
+          "id": "fn_802",
+          "type": "function",
+          "name": "Invoke-SecurityBaseline",
+          "language": "PowerShell",
+          "famille": "Security",
+          "description": "Vérifie la conformité sécurité DSI d'un poste",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" }
+          ],
+          "returns": { "datatype": "PSObject", "description": "Rapport conformité" },
+          "tags": ["security", "baseline", "compliance"]
+        }
+      },
+      {
+        "block_id": "sec_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 900, "y": 220 },
+        "data": {
+          "id": "fn_1101",
+          "type": "function",
+          "name": "Get-LocalAdmins",
+          "language": "PowerShell",
+          "famille": "LocalAccounts",
+          "description": "Audite les membres du groupe Administrateurs local sur une liste de postes",
+          "parameters": [
+            { "name": "ComputerNames", "datatype": "string[]", "required": true }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Admins locaux par poste" },
+          "tags": ["audit", "local", "admin", "security"]
+        }
+      },
+      {
+        "block_id": "sec_f04",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 900, "y": 400 },
+        "data": {
+          "id": "fn_502",
+          "type": "function",
+          "name": "Get-OpenPorts",
+          "language": "PowerShell",
+          "famille": "Network",
+          "description": "Liste les ports TCP/UDP en écoute avec processus",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+            { "name": "Protocol", "datatype": "string", "required": false, "default": "\"TCP\"" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Ports ouverts" },
+          "tags": ["network", "security", "ports"]
+        }
+      },
+      {
+        "block_id": "sec_f05",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1260, "y": 200 },
+        "data": {
+          "id": "fn_1300",
+          "type": "function",
+          "name": "Export-AuditReport",
+          "language": "PowerShell",
+          "famille": "Reporting",
+          "description": "Exporte un rapport d'audit DSI en CSV/HTML",
+          "parameters": [
+            { "name": "Data", "datatype": "PSObject[]", "required": true },
+            { "name": "Title", "datatype": "string", "required": true },
+            { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+            { "name": "Format", "datatype": "string[]", "required": false, "default": "@('CSV','HTML')" }
+          ],
+          "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+          "tags": ["reporting", "export"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "sec_v01", "src_port": "DefaultOUComputers", "tgt_block": "sec_f01", "tgt_port": "SearchBase" },
+      { "src_block": "sec_f01", "src_port": "flow_out", "tgt_block": "sec_ctrl01", "tgt_port": "flow_in" },
+      { "src_block": "sec_f01", "src_port": "return", "tgt_block": "sec_ctrl01", "tgt_port": "collection" },
+      { "src_block": "sec_ctrl01", "src_port": "flow_out", "tgt_block": "sec_f02", "tgt_port": "flow_in" },
+      { "src_block": "sec_f02", "src_port": "flow_out", "tgt_block": "sec_f03", "tgt_port": "flow_in" },
+      { "src_block": "sec_f03", "src_port": "flow_out", "tgt_block": "sec_f04", "tgt_port": "flow_in" },
+      { "src_block": "sec_f02", "src_port": "return", "tgt_block": "sec_f05", "tgt_port": "Data" },
+      { "src_block": "sec_f04", "src_port": "flow_out", "tgt_block": "sec_f05", "tgt_port": "flow_in" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "AuditSecurite_Parc",
+    "code": ""
+  }
+}

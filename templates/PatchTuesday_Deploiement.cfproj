@@ -1,0 +1,290 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_401",
+        "type": "function",
+        "name": "Get-PendingUpdates",
+        "language": "PowerShell",
+        "famille": "Updates",
+        "description": "Liste les MAJ Windows en attente sur un ou plusieurs postes",
+        "parameters": [
+          { "name": "ComputerNames", "datatype": "string[]", "required": false, "default": "@($env:COMPUTERNAME)" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "MAJ en attente par machine" },
+        "tags": ["updates", "audit", "wsus"]
+      },
+      {
+        "id": "fn_400",
+        "type": "function",
+        "name": "Install-WindowsUpdates",
+        "language": "PowerShell",
+        "famille": "Updates",
+        "description": "Lance l'installation des MAJ Windows disponibles via WSUS",
+        "parameters": [
+          { "name": "AcceptAll", "datatype": "switch", "required": false, "default": "false" },
+          { "name": "AutoReboot", "datatype": "switch", "required": false, "default": "false" },
+          { "name": "ExcludeKBs", "datatype": "string[]", "required": false, "default": "@()" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "MAJ installées" },
+        "tags": ["updates", "wsus", "windows"]
+      },
+      {
+        "id": "fn_701",
+        "type": "function",
+        "name": "Get-ServiceHealth",
+        "language": "PowerShell",
+        "famille": "Services",
+        "description": "Vérifie l'état des services critiques post-MAJ",
+        "parameters": [
+          { "name": "CriticalServices", "datatype": "string[]", "required": true },
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+          { "name": "AlertEmail", "datatype": "string", "required": false, "default": "\"\"" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "État des services" },
+        "tags": ["services", "monitoring", "alert"]
+      },
+      {
+        "id": "fn_1300",
+        "type": "function",
+        "name": "Export-AuditReport",
+        "language": "PowerShell",
+        "famille": "Reporting",
+        "description": "Exporte rapport MAJ en CSV/HTML",
+        "parameters": [
+          { "name": "Data", "datatype": "PSObject[]", "required": true },
+          { "name": "Title", "datatype": "string", "required": true },
+          { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+          { "name": "Format", "datatype": "string[]", "required": false, "default": "@('CSV','HTML')" }
+        ],
+        "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+        "tags": ["reporting", "export"]
+      },
+      {
+        "id": "fn_101",
+        "type": "function",
+        "name": "Send-AlertMail",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Envoie le rapport mail DSI",
+        "parameters": [
+          { "name": "To", "datatype": "string", "required": true },
+          { "name": "Subject", "datatype": "string", "required": true },
+          { "name": "Body", "datatype": "string", "required": true },
+          { "name": "From", "datatype": "string", "required": false, "default": "noreply@corp.local" }
+        ],
+        "returns": { "datatype": "bool", "description": "Succès envoi" },
+        "tags": ["mail", "alert"]
+      }
+    ],
+    "variables": [
+      {
+        "id": "var_017",
+        "type": "variable",
+        "name": "WsusServer",
+        "language": "PowerShell",
+        "famille": "Updates",
+        "datatype": "string",
+        "default_value": "\"wsus.corp.local\"",
+        "description": "Serveur WSUS",
+        "scope": "global",
+        "tags": ["wsus", "updates"]
+      },
+      {
+        "id": "var_015",
+        "type": "variable",
+        "name": "SMTPServer",
+        "language": "PowerShell",
+        "famille": "Network",
+        "datatype": "string",
+        "default_value": "\"smtp.corp.local\"",
+        "description": "SMTP interne",
+        "scope": "global",
+        "tags": ["smtp", "mail"]
+      }
+    ]
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "pt_v01",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 40 },
+        "data": {
+          "id": "var_017",
+          "type": "variable",
+          "name": "WsusServer",
+          "language": "PowerShell",
+          "famille": "Updates",
+          "datatype": "string",
+          "default_value": "\"wsus.corp.local\"",
+          "description": "Serveur WSUS",
+          "scope": "global",
+          "tags": ["wsus", "updates"]
+        }
+      },
+      {
+        "block_id": "pt_v02",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 140 },
+        "data": {
+          "id": "var_015",
+          "type": "variable",
+          "name": "SMTPServer",
+          "language": "PowerShell",
+          "famille": "Network",
+          "datatype": "string",
+          "default_value": "\"smtp.corp.local\"",
+          "description": "SMTP interne",
+          "scope": "global",
+          "tags": ["smtp", "mail"]
+        }
+      },
+      {
+        "block_id": "pt_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 360, "y": 40 },
+        "data": {
+          "id": "fn_401",
+          "type": "function",
+          "name": "Get-PendingUpdates",
+          "language": "PowerShell",
+          "famille": "Updates",
+          "description": "Liste les MAJ Windows en attente sur un ou plusieurs postes",
+          "parameters": [
+            { "name": "ComputerNames", "datatype": "string[]", "required": false, "default": "@($env:COMPUTERNAME)" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "MAJ en attente par machine" },
+          "tags": ["updates", "audit", "wsus"]
+        }
+      },
+      {
+        "block_id": "pt_ctrl01",
+        "block_type": "control",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 700, "y": 40 },
+        "data": { "structure": "if", "description": "Si des MAJ sont disponibles" }
+      },
+      {
+        "block_id": "pt_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 950, "y": 40 },
+        "data": {
+          "id": "fn_400",
+          "type": "function",
+          "name": "Install-WindowsUpdates",
+          "language": "PowerShell",
+          "famille": "Updates",
+          "description": "Lance l'installation des MAJ Windows disponibles via WSUS",
+          "parameters": [
+            { "name": "AcceptAll", "datatype": "switch", "required": false, "default": "false" },
+            { "name": "AutoReboot", "datatype": "switch", "required": false, "default": "false" },
+            { "name": "ExcludeKBs", "datatype": "string[]", "required": false, "default": "@()" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "MAJ installées" },
+          "tags": ["updates", "wsus", "windows"]
+        }
+      },
+      {
+        "block_id": "pt_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1290, "y": 40 },
+        "data": {
+          "id": "fn_701",
+          "type": "function",
+          "name": "Get-ServiceHealth",
+          "language": "PowerShell",
+          "famille": "Services",
+          "description": "Vérifie l'état des services critiques post-MAJ",
+          "parameters": [
+            { "name": "CriticalServices", "datatype": "string[]", "required": true },
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" },
+            { "name": "AlertEmail", "datatype": "string", "required": false, "default": "\"\"" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "État des services" },
+          "tags": ["services", "monitoring", "alert"]
+        }
+      },
+      {
+        "block_id": "pt_f04",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1290, "y": 260 },
+        "data": {
+          "id": "fn_1300",
+          "type": "function",
+          "name": "Export-AuditReport",
+          "language": "PowerShell",
+          "famille": "Reporting",
+          "description": "Exporte rapport MAJ en CSV/HTML",
+          "parameters": [
+            { "name": "Data", "datatype": "PSObject[]", "required": true },
+            { "name": "Title", "datatype": "string", "required": true },
+            { "name": "OutputDir", "datatype": "string", "required": false, "default": "\"C:\\\\Reports\"" },
+            { "name": "Format", "datatype": "string[]", "required": false, "default": "@('CSV','HTML')" }
+          ],
+          "returns": { "datatype": "string[]", "description": "Fichiers générés" },
+          "tags": ["reporting", "export"]
+        }
+      },
+      {
+        "block_id": "pt_f05",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1630, "y": 150 },
+        "data": {
+          "id": "fn_101",
+          "type": "function",
+          "name": "Send-AlertMail",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Envoie le rapport mail DSI",
+          "parameters": [
+            { "name": "To", "datatype": "string", "required": true },
+            { "name": "Subject", "datatype": "string", "required": true },
+            { "name": "Body", "datatype": "string", "required": true },
+            { "name": "From", "datatype": "string", "required": false, "default": "noreply@corp.local" }
+          ],
+          "returns": { "datatype": "bool", "description": "Succès envoi" },
+          "tags": ["mail", "alert"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "pt_f01", "src_port": "flow_out", "tgt_block": "pt_ctrl01", "tgt_port": "flow_in" },
+      { "src_block": "pt_f01", "src_port": "return", "tgt_block": "pt_ctrl01", "tgt_port": "condition" },
+      { "src_block": "pt_ctrl01", "src_port": "flow_true", "tgt_block": "pt_f02", "tgt_port": "flow_in" },
+      { "src_block": "pt_f02", "src_port": "flow_out", "tgt_block": "pt_f03", "tgt_port": "flow_in" },
+      { "src_block": "pt_f02", "src_port": "return", "tgt_block": "pt_f04", "tgt_port": "Data" },
+      { "src_block": "pt_f03", "src_port": "flow_out", "tgt_block": "pt_f04", "tgt_port": "flow_in" },
+      { "src_block": "pt_f04", "src_port": "flow_out", "tgt_block": "pt_f05", "tgt_port": "flow_in" },
+      { "src_block": "pt_f04", "src_port": "return", "tgt_block": "pt_f05", "tgt_port": "Body" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "PatchTuesday_Deploiement",
+    "code": ""
+  }
+}

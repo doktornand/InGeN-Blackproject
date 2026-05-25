@@ -1,0 +1,282 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_801",
+        "type": "function",
+        "name": "Get-LockedADAccounts",
+        "language": "PowerShell",
+        "famille": "Security",
+        "description": "Liste les comptes AD verrouillés avec origine du verrouillage",
+        "parameters": [
+          { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUUsers" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Comptes verrouillés" },
+        "tags": ["security", "ad", "lockout"]
+      },
+      {
+        "id": "fn_800",
+        "type": "function",
+        "name": "Get-SecurityEvents",
+        "language": "PowerShell",
+        "famille": "Security",
+        "description": "Extrait les événements de sécurité Windows (4625/4740)",
+        "parameters": [
+          { "name": "ComputerName", "datatype": "string", "required": false, "default": "$DomainController" },
+          { "name": "EventIDs", "datatype": "int[]", "required": false, "default": "$CriticalEventIDs" },
+          { "name": "HoursBack", "datatype": "int", "required": false, "default": "24" }
+        ],
+        "returns": { "datatype": "PSObject[]", "description": "Événements collectés" },
+        "tags": ["security", "eventlog", "audit"]
+      },
+      {
+        "id": "fn_202",
+        "type": "function",
+        "name": "Reset-ADUserPassword",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "description": "Réinitialise le MDP AD avec forçage changement",
+        "parameters": [
+          { "name": "SamAccountName", "datatype": "string", "required": true },
+          { "name": "NewPassword", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["ad", "password", "security"]
+      },
+      {
+        "id": "fn_101",
+        "type": "function",
+        "name": "Send-AlertMail",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Notifie le manager et la DSI",
+        "parameters": [
+          { "name": "To", "datatype": "string", "required": true },
+          { "name": "Subject", "datatype": "string", "required": true },
+          { "name": "Body", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "bool", "description": "Succès envoi" },
+        "tags": ["mail", "alert"]
+      },
+      {
+        "id": "fn_100",
+        "type": "function",
+        "name": "Write-SysLog",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Journalise l'incident lockout",
+        "parameters": [
+          { "name": "Message", "datatype": "string", "required": true },
+          { "name": "Level", "datatype": "string", "required": false, "default": "WARN" }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["logging"]
+      }
+    ],
+    "variables": [
+      {
+        "id": "var_011",
+        "type": "variable",
+        "name": "DomainController",
+        "language": "PowerShell",
+        "famille": "ActiveDirectory",
+        "datatype": "string",
+        "default_value": "\"DC01.corp.local\"",
+        "description": "DC principal",
+        "scope": "global",
+        "tags": ["ad", "dc"]
+      },
+      {
+        "id": "var_020",
+        "type": "variable",
+        "name": "CriticalEventIDs",
+        "language": "PowerShell",
+        "famille": "Monitoring",
+        "datatype": "int[]",
+        "default_value": "@(4625,4740,4768,4769,7036,1074,6008)",
+        "description": "IDs EventLog critiques",
+        "scope": "global",
+        "tags": ["eventlog", "monitoring"]
+      }
+    ]
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "lo_v01",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 60 },
+        "data": {
+          "id": "var_011",
+          "type": "variable",
+          "name": "DomainController",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "datatype": "string",
+          "default_value": "\"DC01.corp.local\"",
+          "description": "DC principal",
+          "scope": "global",
+          "tags": ["ad", "dc"]
+        }
+      },
+      {
+        "block_id": "lo_v02",
+        "block_type": "variable",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 40, "y": 160 },
+        "data": {
+          "id": "var_020",
+          "type": "variable",
+          "name": "CriticalEventIDs",
+          "language": "PowerShell",
+          "famille": "Monitoring",
+          "datatype": "int[]",
+          "default_value": "@(4625,4740,4768,4769,7036,1074,6008)",
+          "description": "IDs EventLog critiques",
+          "scope": "global",
+          "tags": ["eventlog", "monitoring"]
+        }
+      },
+      {
+        "block_id": "lo_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 360, "y": 80 },
+        "data": {
+          "id": "fn_801",
+          "type": "function",
+          "name": "Get-LockedADAccounts",
+          "language": "PowerShell",
+          "famille": "Security",
+          "description": "Liste les comptes AD verrouillés avec origine du verrouillage",
+          "parameters": [
+            { "name": "SearchBase", "datatype": "string", "required": false, "default": "$DefaultOUUsers" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Comptes verrouillés" },
+          "tags": ["security", "ad", "lockout"]
+        }
+      },
+      {
+        "block_id": "lo_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 700, "y": 80 },
+        "data": {
+          "id": "fn_800",
+          "type": "function",
+          "name": "Get-SecurityEvents",
+          "language": "PowerShell",
+          "famille": "Security",
+          "description": "Extrait les événements de sécurité Windows (4625/4740)",
+          "parameters": [
+            { "name": "ComputerName", "datatype": "string", "required": false, "default": "$DomainController" },
+            { "name": "EventIDs", "datatype": "int[]", "required": false, "default": "$CriticalEventIDs" },
+            { "name": "HoursBack", "datatype": "int", "required": false, "default": "24" }
+          ],
+          "returns": { "datatype": "PSObject[]", "description": "Événements collectés" },
+          "tags": ["security", "eventlog", "audit"]
+        }
+      },
+      {
+        "block_id": "lo_ctrl01",
+        "block_type": "control",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1040, "y": 80 },
+        "data": { "structure": "if", "description": "Si verrouillage multiple (> 3 occurrences) → réinitialiser MDP" }
+      },
+      {
+        "block_id": "lo_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1280, "y": 40 },
+        "data": {
+          "id": "fn_202",
+          "type": "function",
+          "name": "Reset-ADUserPassword",
+          "language": "PowerShell",
+          "famille": "ActiveDirectory",
+          "description": "Réinitialise le MDP AD avec forçage changement",
+          "parameters": [
+            { "name": "SamAccountName", "datatype": "string", "required": true },
+            { "name": "NewPassword", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["ad", "password", "security"]
+        }
+      },
+      {
+        "block_id": "lo_f04",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1280, "y": 240 },
+        "data": {
+          "id": "fn_101",
+          "type": "function",
+          "name": "Send-AlertMail",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Notifie le manager et la DSI",
+          "parameters": [
+            { "name": "To", "datatype": "string", "required": true },
+            { "name": "Subject", "datatype": "string", "required": true },
+            { "name": "Body", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "bool", "description": "Succès envoi" },
+          "tags": ["mail", "alert"]
+        }
+      },
+      {
+        "block_id": "lo_f05",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1600, "y": 140 },
+        "data": {
+          "id": "fn_100",
+          "type": "function",
+          "name": "Write-SysLog",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Journalise l'incident lockout",
+          "parameters": [
+            { "name": "Message", "datatype": "string", "required": true },
+            { "name": "Level", "datatype": "string", "required": false, "default": "WARN" }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["logging"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "lo_v01", "src_port": "DomainController", "tgt_block": "lo_f02", "tgt_port": "ComputerName" },
+      { "src_block": "lo_v02", "src_port": "CriticalEventIDs", "tgt_block": "lo_f02", "tgt_port": "EventIDs" },
+      { "src_block": "lo_f01", "src_port": "flow_out", "tgt_block": "lo_f02", "tgt_port": "flow_in" },
+      { "src_block": "lo_f02", "src_port": "flow_out", "tgt_block": "lo_ctrl01", "tgt_port": "flow_in" },
+      { "src_block": "lo_f02", "src_port": "return", "tgt_block": "lo_ctrl01", "tgt_port": "condition" },
+      { "src_block": "lo_ctrl01", "src_port": "flow_true", "tgt_block": "lo_f03", "tgt_port": "flow_in" },
+      { "src_block": "lo_f03", "src_port": "flow_out", "tgt_block": "lo_f04", "tgt_port": "flow_in" },
+      { "src_block": "lo_f04", "src_port": "flow_out", "tgt_block": "lo_f05", "tgt_port": "flow_in" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "LockoutResponse_Incident",
+    "code": ""
+  }
+}

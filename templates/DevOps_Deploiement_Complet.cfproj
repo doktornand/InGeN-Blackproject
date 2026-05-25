@@ -1,0 +1,200 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-25T00:00:00",
+  "library": {
+    "metadata": {
+      "version": "2.0",
+      "description": "CodeForge DSI-Validated SysAdmin Library",
+      "created": "2026-05-25",
+      "author": "DSI — INGEN Systems"
+    },
+    "functions": [
+      {
+        "id": "fn_1400",
+        "type": "function",
+        "name": "Invoke-CICDPipeline",
+        "language": "PowerShell",
+        "famille": "DevOps",
+        "description": "Déclenche pipeline CI/CD",
+        "parameters": [
+          { "name": "PipelineName", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "PSObject", "description": "Run status" },
+        "tags": ["cicd"]
+      },
+      {
+        "id": "fn_1401",
+        "type": "function",
+        "name": "Build-DockerImageDSI",
+        "language": "PowerShell",
+        "famille": "DevOps",
+        "description": "Build & push container",
+        "parameters": [
+          { "name": "ImageName", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "bool", "description": "Success" },
+        "tags": ["docker"]
+      },
+      {
+        "id": "fn_1402",
+        "type": "function",
+        "name": "Deploy-K8sManifestDSI",
+        "language": "PowerShell",
+        "famille": "DevOps",
+        "description": "Apply K8s & rollout",
+        "parameters": [
+          { "name": "ManifestPath", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "string", "description": "Rollout status" },
+        "tags": ["k8s"]
+      },
+      {
+        "id": "fn_101",
+        "type": "function",
+        "name": "Send-AlertMail",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Notification DSI",
+        "parameters": [
+          { "name": "To", "datatype": "string", "required": true },
+          { "name": "Subject", "datatype": "string", "required": true },
+          { "name": "Body", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "bool", "description": "Success" },
+        "tags": ["mail"]
+      },
+      {
+        "id": "fn_100",
+        "type": "function",
+        "name": "Write-SysLog",
+        "language": "PowerShell",
+        "famille": "Logging",
+        "description": "Journalisation",
+        "parameters": [
+          { "name": "Message", "datatype": "string", "required": true }
+        ],
+        "returns": { "datatype": "void", "description": "" },
+        "tags": ["logging"]
+      }
+    ],
+    "variables": []
+  },
+  "canvas": {
+    "blocks": [
+      {
+        "block_id": "do_f01",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 60, "y": 80 },
+        "data": {
+          "id": "fn_1400",
+          "type": "function",
+          "name": "Invoke-CICDPipeline",
+          "language": "PowerShell",
+          "famille": "DevOps",
+          "description": "Déclenche pipeline CI/CD",
+          "parameters": [
+            { "name": "PipelineName", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "PSObject", "description": "Run status" },
+          "tags": ["cicd"]
+        }
+      },
+      {
+        "block_id": "do_f02",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 380, "y": 80 },
+        "data": {
+          "id": "fn_1401",
+          "type": "function",
+          "name": "Build-DockerImageDSI",
+          "language": "PowerShell",
+          "famille": "DevOps",
+          "description": "Build & push container",
+          "parameters": [
+            { "name": "ImageName", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "bool", "description": "Success" },
+          "tags": ["docker"]
+        }
+      },
+      {
+        "block_id": "do_f03",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 700, "y": 80 },
+        "data": {
+          "id": "fn_1402",
+          "type": "function",
+          "name": "Deploy-K8sManifestDSI",
+          "language": "PowerShell",
+          "famille": "DevOps",
+          "description": "Apply K8s & rollout",
+          "parameters": [
+            { "name": "ManifestPath", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "string", "description": "Rollout status" },
+          "tags": ["k8s"]
+        }
+      },
+      {
+        "block_id": "do_f04",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1020, "y": 80 },
+        "data": {
+          "id": "fn_101",
+          "type": "function",
+          "name": "Send-AlertMail",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Notification DSI",
+          "parameters": [
+            { "name": "To", "datatype": "string", "required": true },
+            { "name": "Subject", "datatype": "string", "required": true },
+            { "name": "Body", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "bool", "description": "Success" },
+          "tags": ["mail"]
+        }
+      },
+      {
+        "block_id": "do_f05",
+        "block_type": "function",
+        "is_group": false,
+        "children_ids": [],
+        "pos": { "x": 1340, "y": 80 },
+        "data": {
+          "id": "fn_100",
+          "type": "function",
+          "name": "Write-SysLog",
+          "language": "PowerShell",
+          "famille": "Logging",
+          "description": "Journalisation",
+          "parameters": [
+            { "name": "Message", "datatype": "string", "required": true }
+          ],
+          "returns": { "datatype": "void", "description": "" },
+          "tags": ["logging"]
+        }
+      }
+    ],
+    "connections": [
+      { "src_block": "do_f01", "src_port": "flow_out", "tgt_block": "do_f02", "tgt_port": "flow_in" },
+      { "src_block": "do_f02", "src_port": "flow_out", "tgt_block": "do_f03", "tgt_port": "flow_in" },
+      { "src_block": "do_f03", "src_port": "flow_out", "tgt_block": "do_f04", "tgt_port": "flow_in" },
+      { "src_block": "do_f03", "src_port": "return", "tgt_block": "do_f04", "tgt_port": "Body" },
+      { "src_block": "do_f04", "src_port": "flow_out", "tgt_block": "do_f05", "tgt_port": "flow_in" }
+    ]
+  },
+  "output": {
+    "language": "PowerShell",
+    "name": "DevOps_Deploiement_Complet",
+    "code": ""
+  }
+}
