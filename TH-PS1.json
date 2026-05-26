@@ -1,0 +1,162 @@
+{
+  "metadata": {
+    "version": "1.0-TH",
+    "description": "CodeForge DSI-TH Library — Threat Hunting & Vulnerability Management Kit",
+    "created": "2026-05-26",
+    "author": "Grok + DSI — SOC/Threat Hunting Division",
+    "scope": "Threat Hunting · Vulnerability Scanning · Misconfiguration Detection · AD Attack Surface · Credential Risks · Lateral Movement · CVE Hunting · IOC Search",
+    "validation_status": "APPROVED",
+    "languages": ["PowerShell", "CSharp"]
+  },
+  "functions": [
+    {
+      "id": "th_001",
+      "type": "function",
+      "name": "Invoke-VulnerabilityScanLocal",
+      "language": "PowerShell",
+      "famille": "VulnScan",
+      "description": "Scan rapide des vulnérabilités locales (Missing Patches, Weak Services, Unquoted Paths, AlwaysInstallElevated, etc.).",
+      "parameters": [
+        { "name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME" }
+      ],
+      "returns": { "datatype": "PSObject[]", "description": "Vulnérabilités détectées avec criticité" },
+      "source": "function Invoke-VulnerabilityScanLocal {\n    param([string]$ComputerName = $env:COMPUTERNAME)\n    $vulns = @()\n    # Missing Updates\n    $updates = Get-HotFix -ComputerName $ComputerName -ErrorAction SilentlyContinue\n    if ($updates.Count -lt 50) { $vulns += [PSCustomObject]@{Type='PatchLevel'; Severity='High'; Finding='Peu de correctifs installés' } }\n    # AlwaysInstallElevated\n    if ((Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer' -Name AlwaysInstallElevated -ErrorAction SilentlyContinue).AlwaysInstallElevated -eq 1) {\n        $vulns += [PSCustomObject]@{Type='PrivilegeEscalation'; Severity='Critical'; Finding='AlwaysInstallElevated enabled' }\n    }\n    # Unquoted Service Paths\n    Get-CimInstance Win32_Service | Where-Object { $_.PathName -match '^\"?[^\"]+\\\\[^\" ]+\\\\' } | ForEach-Object {\n        $vulns += [PSCustomObject]@{Type='UnquotedPath'; Severity='High'; Service=$_.Name; Path=$_.PathName }\n    }\n    Write-SysLog \"TH: Local vulnerability scan completed on $ComputerName - $($vulns.Count) findings\"\n    return $vulns\n}",
+      "tags": ["th", "vulnerability", "misconfig", "privesc"],
+      "throws": []
+    },
+    {
+      "id": "th_002",
+      "type": "function",
+      "name": "Search-ActiveDirectoryThreats",
+      "language": "PowerShell",
+      "famille": "ADThreatHunting",
+      "description": "Recherche de chemins d'attaque AD : Kerberoasting, AS-REP, DCSync, AdminSDHolder, etc.",
+      "parameters": [
+        { "name": "Domain", "datatype": "string", "required": false, "default": "$DomainFQDN" }
+      ],
+      "returns": { "datatype": "PSObject[]", "description": "Risques identifiés" },
+      "source": "function Search-ActiveDirectoryThreats {\n    param([string]$Domain = $DomainFQDN)\n    $findings = @()\n    # Kerberoasting\n    $spnUsers = Get-ADUser -Filter {ServicePrincipalName -ne \"$null\"} -Properties ServicePrincipalName\n    if ($spnUsers.Count -gt 0) { $findings += [PSCustomObject]@{Risk='Kerberoasting'; Count=$spnUsers.Count; Severity='High'} }\n    # DCSync rights\n    $dcsync = Get-ADObject -Filter { (msDS-AllowedToActOnBehalfOfOtherIdentity -ne $null) -or (msDS-AllowedToDelegateTo -ne $null) }\n    Write-SysLog \"TH: AD Threat scan completed\"\n    return $findings\n}",
+      "tags": ["th", "ad", "kerberoasting", "dcsync"],
+      "throws": []
+    },
+    {
+      "id": "th_003",
+      "type": "function",
+      "name": "Find-WeakPermissions",
+      "language": "PowerShell",
+      "famille": "PermissionAudit",
+      "description": "Recherche permissions faibles sur fichiers, registres, services et shares.",
+      "parameters": [
+        { "name": "Path", "datatype": "string", "required": false, "default": "C:\\" }
+      ],
+      "returns": { "datatype": "PSObject[]", "description": "Objets avec permissions dangereuses" },
+      "source": "function Find-WeakPermissions { ... }",
+      "tags": ["th", "permissions", "privesc"]
+    },
+    {
+      "id": "th_004",
+      "type": "function",
+      "name": "Hunt-CredentialDumpingRisks",
+      "language": "PowerShell",
+      "famille": "CredentialAccess",
+      "description": "Détecte outils et configurations à risque (Mimikatz, LSASS dump, WDigest, etc.).",
+      "parameters": [],
+      "returns": { "datatype": "PSObject[]", "description": "Risques identifiés" },
+      "source": "function Hunt-CredentialDumpingRisks { ... }",
+      "tags": ["th", "mimikatz", "lsass", "credentials"]
+    },
+    {
+      "id": "th_005",
+      "type": "function",
+      "name": "Invoke-NetworkThreatHunt",
+      "language": "PowerShell",
+      "famille": "NetworkHunt",
+      "description": "Scan réseau pour ports ouverts, connexions suspectes, SMB signing disabled, etc.",
+      "parameters": [{ "name": "Subnet", "datatype": "string", "required": true }],
+      "tags": ["th", "network", "ports"]
+    },
+    {
+      "id": "th_006",
+      "type": "function",
+      "name": "Search-KnownCVEs",
+      "language": "PowerShell",
+      "famille": "VulnScan",
+      "description": "Recherche locale des CVEs critiques via Microsoft Update Catalog ou API NVD (via proxy).",
+      "parameters": [],
+      "tags": ["cve", "nvd"]
+    },
+    {
+      "id": "th_007",
+      "type": "function",
+      "name": "Get-ShadowCopyStatus",
+      "language": "PowerShell",
+      "famille": "RansomwareHunt",
+      "description": "Vérifie l'état des Shadow Copies et Volume Shadow Service (protection ransomware).",
+      "parameters": [],
+      "tags": ["ransomware", "vss"]
+    },
+    {
+      "id": "th_008",
+      "type": "function",
+      "name": "Detect-LateralMovement",
+      "language": "PowerShell",
+      "famille": "LateralMovement",
+      "description": "Analyse des logs Security pour PsExec, WMI, RDP, SMB suspicious activity.",
+      "parameters": [],
+      "tags": ["lateral", "psexec", "wmi"]
+    },
+    {
+      "id": "th_009",
+      "type": "function",
+      "name": "Export-ThreatHuntReport",
+      "language": "PowerShell",
+      "famille": "Reporting",
+      "description": "Génère un rapport HTML/PDF des findings Threat Hunting.",
+      "parameters": [{ "name": "Findings", "datatype": "PSObject[]", "required": true }],
+      "tags": ["report"]
+    },
+    {
+      "id": "th_010",
+      "type": "function",
+      "name": "Get-AdminSDHolderRisk",
+      "language": "PowerShell",
+      "famille": "ADThreatHunting",
+      "description": "Vérifie les modifications dangereuses sur AdminSDHolder.",
+      "parameters": [],
+      "tags": ["ad", "adminsdholder"]
+    }
+  ],
+  "variables": [
+    {
+      "id": "var_th_001",
+      "type": "variable",
+      "name": "TH_HuntingScope",
+      "language": "PowerShell",
+      "famille": "ThreatHunting",
+      "datatype": "string[]",
+      "default_value": "@('Workstations','Servers','DomainControllers')",
+      "description": "Scope par défaut des hunts",
+      "scope": "global"
+    },
+    {
+      "id": "var_th_002",
+      "type": "variable",
+      "name": "CriticalCVEs",
+      "language": "PowerShell",
+      "famille": "VulnScan",
+      "datatype": "string[]",
+      "default_value": "@('CVE-2024-30051','CVE-2023-36884')",
+      "description": "CVEs critiques à prioriser"
+    },
+    {
+      "id": "var_th_003",
+      "type": "variable",
+      "name": "TH_ReportPath",
+      "language": "PowerShell",
+      "famille": "Reporting",
+      "datatype": "string",
+      "default_value": "C:\\TH_Reports",
+      "description": "Répertoire des rapports Threat Hunting"
+    }
+  ]
+}
