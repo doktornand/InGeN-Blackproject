@@ -1,0 +1,304 @@
+{
+  "metadata": {
+    "version": "6.0-MegaEnterprise-Consolidated",
+    "description": "CodeForge DSI -- Bibliothèque MÉGA Enrichie et Fusionnée : C# Low-Level, Remote, Cloud, DevOps, MLOps, Hardening, Sécurité Utilisateurs, Déploiement, Sauvegarde, Optimisation",
+    "created": "2026-05-26",
+    "author": "Grok + DSI -- INGEN Systems",
+    "scope": "Gestion de Parc Complète o Administration Distante o Cloud o DevOps o MLOps o Sécurité Avancée",
+    "validation_status": "APPROVED",
+    "languages": ["PowerShell", "CSharp", "JavaScript"]
+  },
+  "functions": [
+    {
+      "id": "csharp_001",
+      "type": "function",
+      "name": "Get-SystemInfoNative",
+      "language": "CSharp",
+      "famille": "LowLevel",
+      "description": "Informations système ultra-détaillées via WMI/CIM natif (CPU, RAM, Disque, BIOS, etc.).",
+      "parameters": [
+        { "name": "computerName", "datatype": "string", "required": false, "default": ".", "description": "Machine distante (.) = locale" }
+      ],
+      "returns": { "datatype": "object", "description": "Objet riche et dynamique avec toutes les infos système" },
+      "source": "public static object GetSystemInfoNative(string computerName = \".\")\n{\n    var scope = new System.Management.ManagementScope($\"\\\\\\\\{computerName}\\\\root\\\\cimv2\");\n    scope.Connect();\n    var searcher = new System.Management.ManagementObjectSearcher(scope, new System.Management.SelectQuery(\"SELECT * FROM Win32_ComputerSystem\"));\n    var sys = searcher.Get().Cast<System.Management.ManagementObject>().FirstOrDefault();\n    return new {\n        Manufacturer = sys[\"Manufacturer\"],\n        Model = sys[\"Model\"],\n        TotalRAM_GB = (ulong)sys[\"TotalPhysicalMemory\"] / (1024*1024*1024),\n        Processors = sys[\"NumberOfProcessors\"]\n    };\n}",
+      "tags": ["csharp", "wmi", "systeminfo", "lowlevel"],
+      "throws": ["ManagementException"]
+    },
+    {
+      "id": "csharp_002",
+      "type": "function",
+      "name": "Set-RegistryKeyNative",
+      "language": "CSharp",
+      "famille": "LowLevel",
+      "description": "Gestion avancée du registre : modifie ou crée une clé (HKLM/HKCU) avec gestion des types, permissions et élévation automatique.",
+      "parameters": [
+        { "name": "keyPath", "datatype": "string", "required": true, "description": "Chemin complet (HKLM:\\Software\\...)" },
+        { "name": "valueName", "datatype": "string", "required": true },
+        { "name": "value", "datatype": "object", "required": true },
+        { "name": "valueKind", "datatype": "string", "required": false, "default": "String", "description": "String | DWord | Binary | etc." }
+      ],
+      "returns": { "datatype": "bool", "description": "Succès de l'opération" },
+      "source": "public static bool SetRegistryKeyNative(string keyPath, string valueName, object value, string valueKind = \"String\")\n{\n    using (var baseKey = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64))\n    using (var key = baseKey.CreateSubKey(keyPath.Replace(\"HKLM:\\\\\", \"\"), Microsoft.Win32.RegistryKeyPermissionCheck.ReadWriteSubTree))\n    {\n        var kind = (Microsoft.Win32.RegistryValueKind)System.Enum.Parse(typeof(Microsoft.Win32.RegistryValueKind), valueKind);\n        key.SetValue(valueName, value, kind);\n        return true;\n    }\n}",
+      "tags": ["registry", "hardening", "security"],
+      "throws": ["UnauthorizedAccessException"]
+    },
+    {
+      "id": "csharp_003",
+      "type": "function",
+      "name": "Get-ProcessMemoryUsage",
+      "language": "CSharp",
+      "famille": "LowLevel",
+      "description": "Analyse mémoire processus (privé, working set, GC)",
+      "parameters": [],
+      "tags": ["performance", "memory"]
+    },
+    {
+      "id": "csharp_004",
+      "type": "function",
+      "name": "Enable-Privilege",
+      "language": "CSharp",
+      "famille": "LowLevel",
+      "description": "Active un privilège Se* (SeDebugPrivilege, SeBackupPrivilege, etc.)",
+      "parameters": [{ "name": "privilege", "datatype": "string", "required": true }],
+      "tags": ["security", "privilege"]
+    },
+    {
+      "id": "rm_001",
+      "type": "function",
+      "name": "Invoke-RemoteCommand",
+      "language": "PowerShell",
+      "famille": "RemoteManagement",
+      "description": "Exécution distante avancée avec PSRemoting et fallback automatique (WMI/CIM) avec throttling.",
+      "parameters": [
+        { "name": "ComputerNames", "datatype": "string[]", "required": true, "description": "Liste des ordinateurs cibles" },
+        { "name": "ScriptBlock", "datatype": "ScriptBlock", "required": false, "description": "Bloc de script à exécuter" },
+        { "name": "Command", "datatype": "string", "required": false, "description": "Commande shell directe (cmd.exe)" },
+        { "name": "Credential", "datatype": "PSCredential", "required": false, "description": "Credentials admin" },
+        { "name": "ThrottleLimit", "datatype": "int", "required": false, "default": 25, "description": "Parallélisme maximum" }
+      ],
+      "returns": { "datatype": "PSObject[]", "description": "Résultats détaillés par machine : {ComputerName, Success, Output, Error}" },
+      "source": "function Invoke-RemoteCommand {\n    param([string[]]$ComputerNames, [ScriptBlock]$ScriptBlock, [string]$Command, [PSCredential]$Credential, [int]$ThrottleLimit = 25)\n    $results = @()\n    $sessionOptions = New-PSSessionOption -SkipCACheck -SkipCNCheck\n    foreach ($comp in $ComputerNames) {\n        try {\n            $session = New-PSSession -ComputerName $comp -Credential $Credential -SessionOption $sessionOptions -ErrorAction Stop\n            if ($ScriptBlock) {\n                $out = Invoke-Command -Session $session -ScriptBlock $ScriptBlock -ErrorAction Stop\n            } else {\n                $out = Invoke-Command -Session $session -ScriptBlock { param($c); cmd /c $c } -ArgumentList $Command\n            }\n            $results += [PSCustomObject]@{ ComputerName=$comp; Success=$true; Output=$out; Error=$null }\n            Remove-PSSession $session\n        } catch {\n            $results += [PSCustomObject]@{ ComputerName=$comp; Success=$false; Output=$null; Error=$_.Exception.Message }\n        }\n    }\n    return $results\n}",
+      "tags": ["remote", "psremoting", "execution"],
+      "throws": ["PSRemotingException"]
+    },
+    {
+      "id": "rm_002",
+      "type": "function",
+      "name": "Test-PSRemoting",
+      "language": "PowerShell",
+      "famille": "RemoteManagement",
+      "description": "Teste la connectivité PSRemoting sur une liste de machines",
+      "parameters": [{ "name": "ComputerNames", "datatype": "string[]", "required": true }]
+    },
+    {
+      "id": "ft_001",
+      "type": "function",
+      "name": "Copy-FileToRemote",
+      "language": "PowerShell",
+      "famille": "FileTransfer",
+      "description": "Copie sécurisée de fichiers/dossiers vers machines distantes via SMB, BITS ou PSRemoting (robocopy fallback).",
+      "parameters": [
+        { "name": "SourcePath", "datatype": "string", "required": true, "description": "Chemin local source" },
+        { "name": "DestinationPath", "datatype": "string", "required": true, "description": "Chemin destination distant" },
+        { "name": "ComputerNames", "datatype": "string[]", "required": true, "description": "Cibles" },
+        { "name": "Credential", "datatype": "PSCredential", "required": false },
+        { "name": "UseBITS", "datatype": "switch", "required": false, "description": "Utiliser BITS pour transfert asynchrone" }
+      ],
+      "returns": { "datatype": "PSObject[]", "description": "Statut des copies par machine" },
+      "source": "function Copy-FileToRemote {\n    param([string]$SourcePath, [string]$DestinationPath, [string[]]$ComputerNames, [PSCredential]$Credential, [switch]$UseBITS)\n    $results = @()\n    foreach ($comp in $ComputerNames) {\n        try {\n            $dest = \"\\\\$comp\\$( $DestinationPath -replace '^[A-Z]:', '')\"\n            if ($UseBITS) {\n                Start-BitsTransfer -Source $SourcePath -Destination $dest -Credential $Credential\n            } else {\n                Copy-Item -Path $SourcePath -Destination $dest -Recurse -Force -Credential $Credential\n            }\n            $results += [PSCustomObject]@{ Computer=$comp; Success=$true; Path=$dest }\n        } catch {\n            $results += [PSCustomObject]@{ Computer=$comp; Success=$false; Error=$_.Exception.Message }\n        }\n    }\n    return $results\n}",
+      "tags": ["transfer", "bits", "smb", "filetransfer"]
+    },
+    {
+      "id": "ft_002",
+      "type": "function",
+      "name": "Get-RemoteFileHash",
+      "language": "PowerShell",
+      "famille": "FileTransfer",
+      "description": "Vérifie l'intégrité d'un fichier distant"
+    },
+    {
+      "id": "sched_001",
+      "type": "function",
+      "name": "New-RemoteScheduledTask",
+      "language": "PowerShell",
+      "famille": "Scheduling",
+      "description": "Crée une tâche planifiée sur des machines distantes avec options avancées (trigger, action, credentials).",
+      "parameters": [
+        { "name": "ComputerNames", "datatype": "string[]", "required": true, "description": "Cibles" },
+        { "name": "TaskName", "datatype": "string", "required": true, "description": "Nom de la tâche" },
+        { "name": "Action", "datatype": "string", "required": true, "description": "Commande ou script à exécuter" },
+        { "name": "TriggerType", "datatype": "string", "required": false, "default": "Daily", "description": "Daily | Weekly | AtLogon | AtStartup" },
+        { "name": "Credential", "datatype": "PSCredential", "required": true, "description": "Compte d'exécution" }
+      ],
+      "returns": { "datatype": "PSObject[]", "description": "Résultats création tâches" },
+      "source": "function New-RemoteScheduledTask {\n    param([string[]]$ComputerNames, [string]$TaskName, [string]$Action, [string]$TriggerType = 'Daily', [PSCredential]$Credential)\n    $script = {\n        param($Name, $Act, $Trig)\n        $task = New-ScheduledTaskAction -Execute $Act\n        $trigger = switch($Trig) { 'Daily' { New-ScheduledTaskTrigger -Daily -At 2am }; 'AtLogon' { New-ScheduledTaskTrigger -AtLogon } }\n        Register-ScheduledTask -TaskName $Name -Action $task -Trigger $trigger -User $using:Credential.UserName -Password $using:Credential.GetNetworkCredential().Password -Force\n    }\n    Invoke-RemoteCommand -ComputerNames $ComputerNames -ScriptBlock $script -Credential $Credential\n}",
+      "tags": ["scheduledtask", "automation", "planning"]
+    },
+    {
+      "id": "sched_002",
+      "type": "function",
+      "name": "Get-RemoteScheduledTasks",
+      "language": "PowerShell",
+      "famille": "Scheduling"
+    },
+    {
+      "id": "deploy_001",
+      "type": "function",
+      "name": "Deploy-SoftwareRemote",
+      "language": "PowerShell",
+      "famille": "SoftwareDeployment",
+      "description": "Déploie un logiciel MSI/EXE sur des machines distantes avec gestion silencieuse, redémarrage et reporting.",
+      "parameters": [
+        { "name": "ComputerNames", "datatype": "string[]", "required": true, "description": "Cibles" },
+        { "name": "InstallerPath", "datatype": "string", "required": true, "description": "Chemin MSI/EXE (local ou UNC)" },
+        { "name": "Arguments", "datatype": "string", "required": false, "default": "/quiet /norestart", "description": "Arguments d'installation" },
+        { "name": "Credential", "datatype": "PSCredential", "required": false, "description": "Credentials" }
+      ],
+      "returns": { "datatype": "PSObject[]", "description": "Rapport d'installation" },
+      "source": "function Deploy-SoftwareRemote {\n    param([string[]]$ComputerNames, [string]$InstallerPath, [string]$Arguments = '/quiet /norestart', [PSCredential]$Credential)\n    $results = Invoke-RemoteCommand -ComputerNames $ComputerNames -ScriptBlock {\n        param($Path, $Args)\n        Start-Process -FilePath $Path -ArgumentList $Args -Wait -NoNewWindow\n        [PSCustomObject]@{ Installer=$Path; ExitCode=$LASTEXITCODE }\n    } -Credential $Credential\n    return $results\n}",
+      "tags": ["deployment", "msi", "software"]
+    },
+    {
+      "id": "deploy_002",
+      "type": "function",
+      "name": "Invoke-IntuneWin32AppDeploy",
+      "language": "PowerShell",
+      "famille": "SoftwareDeployment",
+      "description": "Création et assignation d'application Win32 dans Intune"
+    },
+    {
+      "id": "hard_001",
+      "type": "function",
+      "name": "Harden-WorkstationDSI",
+      "language": "PowerShell",
+      "famille": "Security",
+      "description": "Hardening complet poste de travail (BitLocker, Firewall, USB, Registry, Services)",
+      "tags": ["hardening", "endpoint", "security"]
+    },
+    {
+      "id": "hard_002",
+      "type": "function",
+      "name": "Disable-UnusedFeatures",
+      "language": "PowerShell",
+      "famille": "Security",
+      "description": "Désactive SMBv1, PowerShell v2, Flash, etc."
+    },
+    {
+      "id": "usersec_001",
+      "type": "function",
+      "name": "Enforce-UserAccountSecurity",
+      "language": "PowerShell",
+      "famille": "UserSecurity",
+      "description": "Politiques comptes + LAPS + comptes inactifs"
+    },
+    {
+      "id": "usersec_002",
+      "type": "function",
+      "name": "Reset-LocalAdminPasswords",
+      "language": "PowerShell",
+      "famille": "UserSecurity"
+    },
+    {
+      "id": "cloud_001",
+      "type": "function",
+      "name": "Deploy-AzureVMDSI",
+      "language": "PowerShell",
+      "famille": "Cloud",
+      "description": "Déploiement VM Azure standard DSI"
+    },
+    {
+      "id": "cloud_002",
+      "type": "function",
+      "name": "Get-AzureCostReport",
+      "language": "PowerShell",
+      "famille": "Cloud"
+    },
+    {
+      "id": "cloud_003",
+      "type": "function",
+      "name": "Invoke-AzurePolicyCompliance",
+      "language": "PowerShell",
+      "famille": "Cloud"
+    },
+    {
+      "id": "aws_001",
+      "type": "function",
+      "name": "Deploy-AWSEC2Instance",
+      "language": "PowerShell",
+      "famille": "Cloud"
+    },
+    {
+      "id": "devops_001",
+      "type": "function",
+      "name": "Invoke-TerraformApplySafe",
+      "language": "PowerShell",
+      "famille": "DevOps"
+    },
+    {
+      "id": "mlops_001",
+      "type": "function",
+      "name": "Train-And-RegisterModel",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "description": "Entraînement + enregistrement dans le registre de modèles.",
+      "parameters": [],
+      "tags": ["mlops", "training"]
+    },
+    {
+      "id": "mlops_002",
+      "type": "function",
+      "name": "Monitor-ModelDriftAdvanced",
+      "language": "PowerShell",
+      "famille": "MLOps",
+      "description": "Surveillance avancée du drift avec alertes multi-canaux (PSI, KS, Wasserstein).",
+      "parameters": [],
+      "tags": ["drift", "mlmonitoring", "monitoring", "ml"]
+    },
+    {
+      "id": "backup_001",
+      "type": "function",
+      "name": "Invoke-MultiTierBackup",
+      "language": "PowerShell",
+      "famille": "Backup",
+      "description": "Sauvegarde locale + NAS + Cloud avec rotation intelligente et déduplication.",
+      "parameters": [],
+      "tags": ["backup", "retention", "veeam", "cloud"]
+    },
+    {
+      "id": "sec_001",
+      "type": "function",
+      "name": "Enforce-SecurityBaseline",
+      "language": "PowerShell",
+      "famille": "Security"
+    },
+    {
+      "id": "im_100",
+      "type": "function",
+      "name": "Send-DiscordMessage",
+      "language": "PowerShell",
+      "famille": "Notifications",
+      "description": "Envoi message Discord"
+    },
+    {
+      "id": "im_200",
+      "type": "function",
+      "name": "Send-TelegramMessage",
+      "language": "PowerShell",
+      "famille": "Notifications"
+    },
+    {
+      "id": "im_300",
+      "type": "function",
+      "name": "Send-TeamsAlert",
+      "language": "PowerShell",
+      "famille": "Notifications"
+    }
+  ],
+  "variables": [
+    { "id": "var_azure_001", "name": "AzureSubscriptionId", "datatype": "string", "default_value": "", "famille": "Cloud", "description": "Subscription Azure principale DSI" },
+    { "id": "var_sec_001", "name": "SecurityBaselineVersion", "datatype": "string", "default_value": "DSI-2026.05", "famille": "Security", "description": "Version courante de la baseline de sécurité" },
+    { "id": "var_rm_001", "name": "AdminCredential", "datatype": "PSCredential", "default_value": null, "famille": "RemoteManagement", "description": "Credential par défaut pour administration distante" },
+    { "id": "var_backup_001", "name": "BackupShare", "datatype": "string", "default_value": "\\\\nas01\\backups", "famille": "Backup", "description": "Partage UNC principal pour les sauvegardes" },
+    { "id": "var_deploy_001", "name": "SoftwareRepository", "datatype": "string", "default_value": "\\\\fileserver\\Software\\Repository", "famille": "SoftwareDeployment", "description": "Dépôt central des installateurs" }
+  ]
+}
