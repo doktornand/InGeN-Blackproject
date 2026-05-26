@@ -1,0 +1,26 @@
+{
+  "codeforge_version": "2.0",
+  "saved_at": "2026-05-26T10:00:00",
+  "canvas": {
+    "blocks": [
+      {"block_id": "ir_v01", "block_type": "variable", "is_group": false, "children_ids": [], "pos": {"x": 40, "y": 60}, "data": {"id": "var_ir_003", "type": "variable", "name": "IR_SOC_ManagementIP", "language": "PowerShell", "famille": "IncidentResponse", "datatype": "string", "default_value": "10.255.10.5", "description": "IP du serveur SOC", "scope": "global", "tags": ["ir", "management"]}},
+      {"block_id": "ir_v02", "block_type": "variable", "is_group": false, "children_ids": [], "pos": {"x": 40, "y": 160}, "data": {"id": "var_ir_001", "type": "variable", "name": "IR_CaseID", "language": "PowerShell", "famille": "IncidentResponse", "datatype": "string", "default_value": "CASE_2026_RAN01", "description": "ID Incident", "scope": "global", "tags": ["ir", "tracking"]}},
+      {"block_id": "ir_v03", "block_type": "variable", "is_group": false, "children_ids": [], "pos": {"x": 40, "y": 260}, "data": {"id": "var_ir_004", "type": "variable", "name": "IR_EvidencePath", "language": "PowerShell", "famille": "IncidentResponse", "datatype": "string", "default_value": "C:\\IR_Evidence", "description": "Racine preuves", "scope": "global", "tags": ["ir", "forensics"]}},
+      {"block_id": "ir_v04", "block_type": "variable", "is_group": false, "children_ids": [], "pos": {"x": 40, "y": 360}, "data": {"id": "var_ir_002", "type": "variable", "name": "IR_IOC_IPList", "language": "PowerShell", "famille": "IncidentResponse", "datatype": "string[]", "default_value": "@()", "description": "Liste IPs malveillantes", "scope": "global", "tags": ["ir", "ioc"]}},
+      {"block_id": "ir_f01", "block_type": "function", "is_group": false, "children_ids": [], "pos": {"x": 380, "y": 120}, "data": {"id": "fn_ir_003", "type": "function", "name": "Isolate-IRHost_Net", "language": "PowerShell", "famille": "Containment", "description": "Coupe réseau en gardant accès SOC", "parameters": [{"name": "ExcludeIPs", "datatype": "string[]", "required": false, "default": "@()"}, {"name": "DisableAdapters", "datatype": "switch", "required": false, "default": "false"}], "returns": {"datatype": "void", "description": " "}, "tags": ["ir", "isolation", "containment"]}},
+      {"block_id": "ir_f02", "block_type": "function", "is_group": false, "children_ids": [], "pos": {"x": 720, "y": 120}, "data": {"id": "fn_ir_001", "type": "function", "name": "Get-IRProcessAnomalies", "language": "PowerShell", "famille": "Forensics", "description": "Détecte processus suspects", "parameters": [{"name": "ComputerName", "datatype": "string", "required": false, "default": "$env:COMPUTERNAME"}, {"name": "ThresholdCPU", "datatype": "int", "required": false, "default": "80"}], "returns": {"datatype": "PSObject[]", "description": "Processus suspects"}, "tags": ["ir", "process", "detection"]}},
+      {"block_id": "ir_f03", "block_type": "function", "is_group": false, "children_ids": [], "pos": {"x": 1060, "y": 120}, "data": {"id": "fn_ir_005", "type": "function", "name": "Export-IRForensicPackage", "language": "PowerShell", "famille": "Forensics", "description": "Collecte artefacts & ZIP horodaté", "parameters": [{"name": "TargetDir", "datatype": "string", "required": false, "default": "C:\\IR_Evidence"}, {"name": "CaseID", "datatype": "string", "required": true}], "returns": {"datatype": "string", "description": "Chemin ZIP"}, "tags": ["ir", "evidence", "export"]}},
+      {"block_id": "ir_f04", "block_type": "function", "is_group": false, "children_ids": [], "pos": {"x": 1400, "y": 120}, "data": {"id": "fn_ir_002", "type": "function", "name": "Block-IRIOC_Network", "language": "PowerShell", "famille": "Containment", "description": "Bloque IPs/Ports IOCs via Firewall", "parameters": [{"name": "IPList", "datatype": "string[]", "required": true}, {"name": "RuleNamePrefix", "datatype": "string", "required": false, "default": "IR_BLOCK_"}, {"name": "Direction", "datatype": "string", "required": false, "default": "Both"}], "returns": {"datatype": "bool", "description": "Succès"}, "tags": ["ir", "firewall", "ioc"]}}
+    ],
+    "connections": [
+      {"src_block": "ir_v01", "src_port": "IR_SOC_ManagementIP", "tgt_block": "ir_f01", "tgt_port": "ExcludeIPs"},
+      {"src_block": "ir_f01", "src_port": "flow_out", "tgt_block": "ir_f02", "tgt_port": "flow_in"},
+      {"src_block": "ir_f02", "src_port": "flow_out", "tgt_block": "ir_f03", "tgt_port": "flow_in"},
+      {"src_block": "ir_v02", "src_port": "IR_CaseID", "tgt_block": "ir_f03", "tgt_port": "CaseID"},
+      {"src_block": "ir_v03", "src_port": "IR_EvidencePath", "tgt_block": "ir_f03", "tgt_port": "TargetDir"},
+      {"src_block": "ir_f03", "src_port": "flow_out", "tgt_block": "ir_f04", "tgt_port": "flow_in"},
+      {"src_block": "ir_v04", "src_port": "IR_IOC_IPList", "tgt_block": "ir_f04", "tgt_port": "IPList"}
+    ]
+  },
+  "output": {"language": "PowerShell", "name": "Ransomware_Response_Chain", "code": ""}
+}
