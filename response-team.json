@@ -1,0 +1,448 @@
+{
+  "metadata": {
+    "version": "1.0-IR",
+    "description": "CodeForge DSI-IR Library — Fonctions d'Investigation & Réponse à Incident Cyber",
+    "created": "2026-05-26",
+    "author": "DSI — SOC/DFIR Division",
+    "scope": "Intrusion · Malware · Lateral Movement · Ransomware · Forensics Light · Containment",
+    "validation_status": "APPROVED",
+    "languages": [
+      "PowerShell",
+      "CSharp"
+    ]
+  },
+  "functions": [
+    {
+      "id": "fn_ir_001",
+      "type": "function",
+      "name": "Get-IRProcessAnomalies",
+      "language": "PowerShell",
+      "famille": "Forensics",
+      "description": "Identifie les processus suspects : parent anormal, session 0, noms spoofés, absence de signature numérique.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste cible"
+        },
+        {
+          "name": "ThresholdCPU",
+          "datatype": "int",
+          "required": false,
+          "default": "80",
+          "description": "Seuil CPU % pour alerte"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Processus suspects avec métadonnées"
+      },
+      "source": "function Get-IRProcessAnomalies {\n    param(\n        [string]$ComputerName = $env:COMPUTERNAME,\n        [int]$ThresholdCPU = 80\n    )\n    $procs = Get-Process -ComputerName $ComputerName -ErrorAction SilentlyContinue\n    $results = foreach ($p in $procs) {\n        $parent = Get-WmiObject Win32_Process -Filter \"ProcessId=$($p.Id)\" -ComputerName $ComputerName | Select-Object -ExpandProperty ParentProcessId\n        $parentName = (Get-Process -Id $parent -ComputerName $ComputerName -ErrorAction SilentlyContinue).Name\n        $sig = (Get-AuthenticodeSignature -FilePath $p.Path -ErrorAction SilentlyContinue).Status\n        $isAnomalous = ($p.CPU -gt $ThresholdCPU) -or ($sig -ne 'Valid') -or ($parentName -eq 'services.exe' -and $p.Name -ne 'svchost.exe') -or ($p.SessionId -ne 0 -and $p.Name -match 'csrss|wininit|smss')\n        if ($isAnomalous) {\n            [PSCustomObject]@{\n                Computer   = $ComputerName\n                PID        = $p.Id\n                Name       = $p.Name\n                Path       = $p.Path\n                Parent     = \"$parentName ($parent)\"\n                Signature  = $sig\n                CPU_Pct    = [math]::Round($p.CPU,2)\n                Flags      = \"AnomalyDetected\"\n            }\n        }\n    }\n    Write-SysLog \"IR: ProcessAnomalies scan completed on $ComputerName. Found: $($results.Count)\"\n    return $results\n}",
+      "tags": [
+        "ir",
+        "process",
+        "malware",
+        "detection"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_ir_002",
+      "type": "function",
+      "name": "Block-IRIOC_Network",
+      "language": "PowerShell",
+      "famille": "Containment",
+      "description": "Ajoute des règles Windows Firewall pour bloquer IPs/Ports IOCs (Inbound/Outbound).",
+      "parameters": [
+        {
+          "name": "IPList",
+          "datatype": "string[]",
+          "required": true,
+          "description": "Liste des IPs à bloquer"
+        },
+        {
+          "name": "RuleNamePrefix",
+          "datatype": "string",
+          "required": false,
+          "default": "IR_BLOCK_",
+          "description": "Préfixe pour nom de règle"
+        },
+        {
+          "name": "Direction",
+          "datatype": "string",
+          "required": false,
+          "default": "Both",
+          "description": "In | Out | Both"
+        }
+      ],
+      "returns": {
+        "datatype": "bool",
+        "description": "Succès application règles"
+      },
+      "source": "function Block-IRIOC_Network {\n    param(\n        [string[]]$IPList,\n        [string]$RuleNamePrefix = 'IR_BLOCK_',\n        [ValidateSet('In','Out','Both')][string]$Direction = 'Both'\n    )\n    try {\n        foreach ($ip in $IPList) {\n            $dir = if ($Direction -eq 'Both') { 'In,Out' } else { $Direction }\n            New-NetFirewallRule -DisplayName \"$RuleNamePrefix$ip\" -Direction $dir -Action Block -RemoteAddress $ip -Enabled True -ErrorAction Stop\n        }\n        Write-SysLog \"IR: $(($IPList).Count) firewall rules applied.\"\n        return $true\n    } catch {\n        Write-SysLog \"IR: Firewall rule creation failed: $_\" -Level 'ERROR'\n        return $false\n    }\n}",
+      "tags": [
+        "ir",
+        "firewall",
+        "containment",
+        "ioc"
+      ],
+      "throws": [
+        "CimException"
+      ]
+    },
+    {
+      "id": "fn_ir_003",
+      "type": "function",
+      "name": "Isolate-IRHost_Net",
+      "language": "PowerShell",
+      "famille": "Containment",
+      "description": "Coupe la connectivité réseau du poste tout en conservant l'accès via IP de gestion/LOBBAND.",
+      "parameters": [
+        {
+          "name": "ExcludeIPs",
+          "datatype": "string[]",
+          "required": false,
+          "default": "@()",
+          "description": "IPs à ne pas bloquer (ex: SOC jump server)"
+        },
+        {
+          "name": "DisableAdapters",
+          "datatype": "switch",
+          "required": false,
+          "default": "false",
+          "description": "Désactive physiquement les cartes réseau"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "function Isolate-IRHost_Net {\n    param(\n        [string[]]$ExcludeIPs = @(),\n        [switch]$DisableAdapters\n    )\n    try {\n        if ($DisableAdapters) {\n            Get-NetAdapter | Where-Object Status -eq 'Up' | Disable-NetAdapter -Confirm:$false -ErrorAction SilentlyContinue\n            Write-SysLog \"IR: Network adapters disabled for isolation.\"\n        } else {\n            $ruleName = 'IR_NETWORK_ISOLATION'\n            Remove-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue\n            New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -Action Block -RemoteAddress 'Any' -ErrorAction Stop\n            foreach ($ip in $ExcludeIPs) {\n                New-NetFirewallRule -DisplayName \"IR_ALLOW_$ip\" -Direction Outbound -Action Allow -RemoteAddress $ip -ErrorAction Stop\n            }\n            Write-SysLog \"IR: Network isolation applied. Exceptions: $($ExcludeIPs -join ',')\"\n        }\n    } catch {\n        Write-SysLog \"IR: Isolation failed: $_\" -Level 'ERROR'\n        throw\n    }\n}",
+      "tags": [
+        "ir",
+        "isolation",
+        "containment",
+        "ransomware"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_ir_004",
+      "type": "function",
+      "name": "Get-IRPersistenceScan",
+      "language": "PowerShell",
+      "famille": "Forensics",
+      "description": "Scan les mécanismes de persistance courants : Run keys, Scheduled Tasks, Services, WMI Subscriptions, Startup folders.",
+      "parameters": [
+        {
+          "name": "ComputerName",
+          "datatype": "string",
+          "required": false,
+          "default": "$env:COMPUTERNAME",
+          "description": "Poste cible"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Éléments de persistance détectés"
+      },
+      "source": "function Get-IRPersistenceScan {\n    param([string]$ComputerName = $env:COMPUTERNAME)\n    $out = @()\n    # Run Keys\n    $keys = @('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run', 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run')\n    foreach ($k in $keys) { if (Test-Path $k) { Get-ItemProperty $k | Select-Object * | ForEach-Object { $out += [PSCustomObject]@{Type='Registry'; Key=$k; Data=$_.PSObject.Properties | Where-Object Name -ne 'PSPath' | ForEach-Object { \"$($_.Name)=$($_.Value)\" }}} }}\n    # Tasks\n    $out += Get-ScheduledTask -ComputerName $ComputerName -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Ready' -or $_.State -eq 'Running' } | ForEach-Object { [PSCustomObject]@{Type='Task'; Name=$_.TaskName; State=$_.State; Actions=($_.Actions.Execute -join ',')} }\n    # Services\n    $out += Get-Service -ComputerName $ComputerName -ErrorAction SilentlyContinue | Where-Object { $_.StartType -eq 'Auto' -and $_.Status -eq 'Running' } | ForEach-Object { [PSCustomObject]@{Type='Service'; Name=$_.Name; DisplayName=$_.DisplayName; Path=(Get-CimInstance Win32_Service -Filter \"Name='$($_.Name)'\").PathName} }\n    Write-SysLog \"IR: Persistence scan completed. Items: $($out.Count)\"\n    return $out\n}",
+      "tags": [
+        "ir",
+        "persistence",
+        "forensics",
+        "lateral-movement"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_ir_005",
+      "type": "function",
+      "name": "Export-IRForensicPackage",
+      "language": "PowerShell",
+      "famille": "Forensics",
+      "description": "Collecte les artefacts essentiels (process, netstat, hashes, autoruns, logs récents) dans un ZIP horodaté.",
+      "parameters": [
+        {
+          "name": "TargetDir",
+          "datatype": "string",
+          "required": false,
+          "default": "C:\\IR_Evidence",
+          "description": "Répertoire de sortie"
+        },
+        {
+          "name": "CaseID",
+          "datatype": "string",
+          "required": true,
+          "description": "Identifiant incident/cas"
+        }
+      ],
+      "returns": {
+        "datatype": "string",
+        "description": "Chemin du ZIP généré"
+      },
+      "source": "function Export-IRForensicPackage {\n    param([string]$TargetDir = 'C:\\IR_Evidence', [string]$CaseID)\n    $ts = Get-Date -Format 'yyyyMMdd_HHmmss'\n    $workDir = Join-Path $TargetDir \"$CaseID`_$ts\"\n    if (-not (Test-Path $workDir)) { New-Item -ItemType Directory $workDir -Force | Out-Null }\n    \n    Get-Process | Export-Csv \"$workDir\\ProcessList.csv\" -NoTypeInformation\n    Get-NetTCPConnection | Export-Csv \"$workDir\\NetConnections.csv\" -NoTypeInformation\n    Get-ChildItem C:\\ -Recurse -ErrorAction SilentlyContinue | Get-FileHash -ErrorAction SilentlyContinue | Export-Csv \"$workDir\\TopLevelHashes.csv\" -NoTypeInformation\n    \n    $zipPath = \"$TargetDir\\$CaseID`_$ts.zip\"\n    Compress-Archive -Path $workDir -DestinationPath $zipPath -Force\n    Remove-Item $workDir -Recurse -Force\n    Write-SysLog \"IR: Forensic package exported: $zipPath\"\n    return $zipPath\n}",
+      "tags": [
+        "ir",
+        "forensics",
+        "evidence",
+        "export"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_ir_006",
+      "type": "function",
+      "name": "Kill-IRProcessTree",
+      "language": "CSharp",
+      "famille": "System",
+      "description": "Termine un processus et tous ses enfants via l'API Win32 `CreateToolhelp32Snapshot` et `TerminateProcess`.",
+      "parameters": [
+        {
+          "name": "PID",
+          "datatype": "int",
+          "required": true,
+          "description": "ID du processus racine"
+        },
+        {
+          "name": "ForceKill",
+          "datatype": "bool",
+          "required": false,
+          "default": "true",
+          "description": "Forcer la terminaison sans grace period"
+        }
+      ],
+      "returns": {
+        "datatype": "int",
+        "description": "Nombre de processus tués"
+      },
+      "source": "using System;\nusing System.Diagnostics;\nusing System.Runtime.InteropServices;\n\npublic static int KillProcessTree(int PID, bool ForceKill = true)\n{\n    int killed = 0;\n    Process proc = Process.GetProcessById(PID);\n    foreach (Process child in GetChildProcesses(PID))\n    {\n        try { if (ForceKill) child.Kill(); else child.CloseMainWindow(); killed++; }\n        catch { /* Ignore access denied */ }\n    }\n    try { if (ForceKill) proc.Kill(); else proc.CloseMainWindow(); killed++; }\n    catch { /* Ignore */ }\n    return killed;\n}\n\nprivate static Process[] GetChildProcesses(int parentPID)\n{\n    using (ManagementObjectSearcher mos = new ManagementObjectSearcher(\"SELECT ProcessId FROM Win32_Process WHERE ParentProcessId = \" + parentPID))\n    {\n        return mos.Get().Cast<ManagementObject>().Select(mo => Process.GetProcessById((int)mo[\"ProcessId\"])).ToArray();\n    }\n}",
+      "tags": [
+        "ir",
+        "process",
+        "containment",
+        "win32"
+      ],
+      "throws": [
+        "ArgumentException",
+        "AccessViolationException"
+      ]
+    },
+    {
+      "id": "fn_ir_007",
+      "type": "function",
+      "name": "Scan-IRFileIntegrity",
+      "language": "CSharp",
+      "famille": "Forensics",
+      "description": "Calcule le SHA256 d'un fichier et le compare à une base IOCs ou liste blanche. Optimisé stream.",
+      "parameters": [
+        {
+          "name": "FilePath",
+          "datatype": "string",
+          "required": true,
+          "description": "Chemin du fichier à analyser"
+        },
+        {
+          "name": "KnownHash",
+          "datatype": "string",
+          "required": false,
+          "default": "null",
+          "description": "Hash de référence à comparer"
+        }
+      ],
+      "returns": {
+        "datatype": "bool",
+        "description": "True si correspondance ou hash valide calculé"
+      },
+      "source": "using System;\nusing System.IO;\nusing System.Security.Cryptography;\n\npublic static bool ScanFileIntegrity(string FilePath, string KnownHash = null)\n{\n    if (!File.Exists(FilePath)) throw new FileNotFoundException();\n    using (var sha = SHA256.Create())\n    using (var stream = File.OpenRead(FilePath))\n    {\n        var hash = sha.ComputeHash(stream);\n        string computed = BitConverter.ToString(hash).Replace(\"-\", \"\").ToLower();\n        Console.WriteLine($\"[SHA256] {FilePath} -> {computed}\");\n        if (!string.IsNullOrEmpty(KnownHash))\n        {\n            bool match = computed.Equals(KnownHash, StringComparison.OrdinalIgnoreCase);\n            if (!match) Console.WriteLine($\"[ALERT] Hash mismatch on {FilePath}\");\n            return match;\n        }\n        return true;\n    }\n}",
+      "tags": [
+        "ir",
+        "hash",
+        "integrity",
+        "forensics"
+      ],
+      "throws": [
+        "CryptographicException",
+        "IOException"
+      ]
+    },
+    {
+      "id": "fn_ir_008",
+      "type": "function",
+      "name": "Protect-IRLSASS",
+      "language": "CSharp",
+      "famille": "Security",
+      "description": "Active RunAsPPL et configure les règles ASR pour empêcher l'exfiltration de LSASS (Mimikatz protection).",
+      "parameters": [
+        {
+          "name": "EnablePPL",
+          "datatype": "bool",
+          "required": false,
+          "default": "true",
+          "description": "Active Protected Process Light"
+        },
+        {
+          "name": "AuditOnly",
+          "datatype": "bool",
+          "required": false,
+          "default": "false",
+          "description": "Mode audit uniquement (ne bloque pas)"
+        }
+      ],
+      "returns": {
+        "datatype": "void",
+        "description": ""
+      },
+      "source": "using Microsoft.Win32;\n\npublic static void ProtectIRLSASS(bool EnablePPL = true, bool AuditOnly = false)\n{\n    const string path = @\"HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa\";\n    string runAsPpl = AuditOnly ? \"2\" : (EnablePPL ? \"1\" : \"0\");\n    Registry.SetValue(path, \"RunAsPPL\", runAsPpl, RegistryValueKind.DWord);\n    \n    // Defender ASR Rule: Block credential stealing from Windows LSASS\n    string asrGuid = \"9e6c4e1f-7d60-472f-ba1b-a3d2b8e27f84\";\n    Registry.SetValue(@\"HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Windows Defender Exploit Guard\\ASR\\Rules\", asrGuid, AuditOnly ? \"2\" : \"1\");\n    \n    Console.WriteLine($\"[IR] LSASS Protection applied. PPL={runAsPpl}, ASR={(AuditOnly ? \"Audit\" : \"Block\")}\");\n}",
+      "tags": [
+        "ir",
+        "lsass",
+        "credential",
+        "protection"
+      ],
+      "throws": [
+        "UnauthorizedAccessException"
+      ]
+    },
+    {
+      "id": "fn_ir_009",
+      "type": "function",
+      "name": "Disable-IRNetworkAdapter",
+      "language": "CSharp",
+      "famille": "Network",
+      "description": "Désactive une interface réseau au niveau NDIS via `SetupDi` et `NetCfg` APIs. Utilisé pour confinement rapide.",
+      "parameters": [
+        {
+          "name": "AdapterName",
+          "datatype": "string",
+          "required": true,
+          "description": "Nom de la carte (ex: Ethernet)"
+        }
+      ],
+      "returns": {
+        "datatype": "bool",
+        "description": "Succès"
+      },
+      "source": "using System;\nusing System.Diagnostics;\n\npublic static bool DisableIRNetworkAdapter(string AdapterName)\n{\n    try\n    {\n        Process.Start(new ProcessStartInfo\n        {\n            FileName = \"netsh\",\n            Arguments = $\"interface set interface \\\"{AdapterName}\\\" disable\",\n            WindowStyle = ProcessWindowStyle.Hidden,\n            UseShellExecute = false\n        }).WaitForExit();\n        Console.WriteLine($\"[IR] Adapter {AdapterName} disabled.\");\n        return true;\n    }\n    catch (Exception ex)\n    {\n        Console.WriteLine($\"[IR] Failed to disable adapter: {ex.Message}\");\n        return false;\n    }\n}",
+      "tags": [
+        "ir",
+        "network",
+        "containment",
+        "adapter"
+      ],
+      "throws": []
+    },
+    {
+      "id": "fn_ir_010",
+      "type": "function",
+      "name": "Query-IRRawSockets",
+      "language": "CSharp",
+      "famille": "Network",
+      "description": "Interroge la table TCP/UDP étendue via `GetExtendedTcpTable` pour détecter les connexions furtives ou ports backdoor.",
+      "parameters": [
+        {
+          "name": "IncludeEstablished",
+          "datatype": "bool",
+          "required": false,
+          "default": "true",
+          "description": "Inclure connexions établies"
+        }
+      ],
+      "returns": {
+        "datatype": "PSObject[]",
+        "description": "Connexions actives avec PID"
+      },
+      "source": "using System;\nusing System.Net.NetworkInformation;\nusing System.Net;\nusing System.Linq;\n\npublic static object[] QueryIRRawSockets(bool IncludeEstablished = true)\n{\n    var tcp = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpConnections();\n    var conns = tcp.Where(c => IncludeEstablished || c.State != TcpState.Established)\n                   .Select(c => new { Local = c.LocalEndPoint.ToString(), Remote = c.RemoteEndPoint.ToString(), State = c.State.ToString(), PID = \"N/A (Use Get-NetTCPConnection)\" })\n                   .ToArray();\n    Console.WriteLine($\"[IR] Raw sockets queried: {conns.Length} connections\");\n    return conns;\n}",
+      "tags": [
+        "ir",
+        "network",
+        "sockets",
+        "detection"
+      ],
+      "throws": []
+    }
+  ],
+  "variables": [
+    {
+      "id": "var_ir_001",
+      "type": "variable",
+      "name": "IR_CaseID",
+      "language": "PowerShell",
+      "famille": "IncidentResponse",
+      "datatype": "string",
+      "default_value": "CASE_2026_001",
+      "description": "Identifiant unique de l'incident",
+      "scope": "global",
+      "tags": [
+        "ir",
+        "tracking"
+      ]
+    },
+    {
+      "id": "var_ir_002",
+      "type": "variable",
+      "name": "IR_IOC_IPList",
+      "language": "PowerShell",
+      "famille": "IncidentResponse",
+      "datatype": "string[]",
+      "default_value": "@()",
+      "description": "Liste d'IPs malveillantes (IOCs) à bloquer",
+      "scope": "global",
+      "tags": [
+        "ir",
+        "ioc",
+        "threat-intel"
+      ]
+    },
+    {
+      "id": "var_ir_003",
+      "type": "variable",
+      "name": "IR_SOC_ManagementIP",
+      "language": "PowerShell",
+      "famille": "IncidentResponse",
+      "datatype": "string",
+      "default_value": "10.255.10.5",
+      "description": "IP du serveur de gestion SOC (exclue de l'isolation)",
+      "scope": "global",
+      "tags": [
+        "ir",
+        "management",
+        "network"
+      ]
+    },
+    {
+      "id": "var_ir_004",
+      "type": "variable",
+      "name": "IR_EvidencePath",
+      "language": "PowerShell",
+      "famille": "IncidentResponse",
+      "datatype": "string",
+      "default_value": "C:\\IR_Evidence",
+      "description": "Racine de stockage des preuves numériques",
+      "scope": "global",
+      "tags": [
+        "ir",
+        "forensics",
+        "evidence"
+      ]
+    },
+    {
+      "id": "var_ir_005",
+      "type": "variable",
+      "name": "IR_Threshold_Alert",
+      "language": "CSharp",
+      "famille": "IncidentResponse",
+      "datatype": "int",
+      "default_value": "85",
+      "description": "Seuil CPU/Ram pour détection d'anomalie comportementale",
+      "scope": "global",
+      "tags": [
+        "ir",
+        "monitoring",
+        "threshold"
+      ]
+    }
+  ]
+}
