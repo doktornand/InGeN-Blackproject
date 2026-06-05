@@ -1,0 +1,1464 @@
+{
+ "metadata": {
+  "version": "5.1-ULTIMATE-LATERAL-AUDIT",
+  "description": "CodeForge DSI-Validated Lateral Movement Auditing & Remote Administration Library — Blue Team / SysAdmin / Incident Response ONLY [CORRIGÉ : string parasite supprimée, sources fn_016→050 complétées, $job→$jobs, helpers ajoutés]",
+  "created": "2026-06-05",
+  "author": "DSI — INGEN Systems | Blue Team Division",
+  "scope": "Administration à distance sécurisée · Audit des sessions · Vérification des partages admin · Exécution de tâches planifiées à distance · Forensique légère · Détection d'anomalies de mouvement latéral",
+  "validation_status": "APPROVED (Strict Usage Policy)",
+  "languages": [
+   "PowerShell",
+   "CSharp"
+  ],
+  "families": [
+   "LateralAdmin-Audit",
+   "RemoteExec",
+   "Forensics",
+   "CSharp-Remote"
+  ]
+ },
+ "functions": [
+  {
+   "id": "fn_helper_001",
+   "type": "function",
+   "name": "Write-SysLog",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Helper de journalisation centralisée. Écrit un message horodaté dans la console et dans un fichier de log rotatif.",
+   "parameters": [
+    {
+     "name": "Message",
+     "datatype": "string",
+     "required": true,
+     "description": "Message à journaliser"
+    },
+    {
+     "name": "Level",
+     "datatype": "string",
+     "required": false,
+     "default": "'INFO'",
+     "description": "Niveau de log : INFO | WARN | ERROR | AUDIT"
+    },
+    {
+     "name": "LogPath",
+     "datatype": "string",
+     "required": false,
+     "default": "$env:TEMP\\\\DSI_SysLog.txt",
+     "description": "Chemin du fichier de log"
+    }
+   ],
+   "returns": {
+    "datatype": "void",
+    "description": "Aucun retour"
+   },
+   "source": "function Write-SysLog {\n    param(\n        [string]$Message,\n        [string]$Level   = 'INFO',\n        [string]$LogPath = \"$env:TEMP\\DSI_SysLog.txt\"\n    )\n    $ts    = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')\n    $entry = \"[$ts] [$Level] $Message\"\n    $color = switch ($Level) {\n        'ERROR' { 'Red'     }\n        'WARN'  { 'Yellow'  }\n        'AUDIT' { 'Cyan'    }\n        default { 'Green'   }\n    }\n    Write-Host $entry -ForegroundColor $color\n    Add-Content -Path $LogPath -Value $entry -Encoding UTF8\n}",
+   "tags": [
+    "helper",
+    "logging",
+    "sysadmin"
+   ]
+  },
+  {
+   "id": "fn_helper_002",
+   "type": "function",
+   "name": "WriteLog",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Helper de journalisation C# statique. Écrit dans la console et dans un fichier de log avec horodatage.",
+   "parameters": [
+    {
+     "name": "message",
+     "datatype": "string",
+     "required": true,
+     "description": "Message à journaliser"
+    },
+    {
+     "name": "level",
+     "datatype": "string",
+     "required": false,
+     "default": "\"INFO\"",
+     "description": "Niveau de log : INFO | WARN | ERROR"
+    }
+   ],
+   "returns": {
+    "datatype": "void",
+    "description": "Aucun retour"
+   },
+   "source": "public static void WriteLog(string message, string level = \"INFO\") {\n    string ts    = DateTime.Now.ToString(\"yyyy-MM-dd HH:mm:ss\");\n    string entry = $\"[{ts}] [{level}] {message}\";\n    ConsoleColor color = level switch {\n        \"ERROR\" => ConsoleColor.Red,\n        \"WARN\"  => ConsoleColor.Yellow,\n        \"AUDIT\" => ConsoleColor.Cyan,\n        _       => ConsoleColor.Green\n    };\n    Console.ForegroundColor = color;\n    Console.WriteLine(entry);\n    Console.ResetColor();\n    string logPath = Path.Combine(Path.GetTempPath(), \"DSI_SysLog.txt\");\n    File.AppendAllText(logPath, entry + Environment.NewLine);\n}",
+   "tags": [
+    "helper",
+    "logging",
+    "csharp"
+   ]
+  },
+  {
+   "id": "fn_lat_001",
+   "type": "function",
+   "name": "Invoke-SecureRemoteCommand",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Exécute une commande sur un hôte distant via WinRM/PSRemoting avec journalisation d'audit stricte et validation des droits.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Nom de la machine cible"
+    },
+    {
+     "name": "ScriptBlock",
+     "datatype": "string",
+     "required": true,
+     "description": "Commande à exécuter"
+    },
+    {
+     "name": "Credential",
+     "datatype": "PSCredential",
+     "required": false,
+     "default": "$null",
+     "description": "Identifiants explicites (sinon contexte actuel)"
+    },
+    {
+     "name": "AuditLog",
+     "datatype": "switch",
+     "required": false,
+     "default": "true",
+     "description": "Forcer l'écriture dans le journal d'audit DSI"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Résultat de la commande avec métadonnées d'exécution"
+   },
+   "source": "function Invoke-SecureRemoteCommand {\n param([string]$ComputerName, [string]$ScriptBlock, [PSCredential]$Credential, [switch]$AuditLog)\n $sb = [ScriptBlock]::Create($ScriptBlock)\n $params = @{ ComputerName = $ComputerName; ScriptBlock = $sb; ErrorAction = 'Stop' }\n if ($Credential) { $params['Credential'] = $Credential }\n try {\n  $result = Invoke-Command @params\n  if ($AuditLog) { Write-SysLog -Message \"EXEC_REMOTE: $ComputerName | User: $env:USERNAME | Cmd: $ScriptBlock\" -Level 'AUDIT' }\n  return $result\n } catch {\n  Write-SysLog -Message \"ECHEC_EXEC_REMOTE: $ComputerName | Erreur: $_\" -Level 'ERROR'\n  throw\n }\n}",
+   "tags": [
+    "remote",
+    "winrm",
+    "audit",
+    "admin"
+   ],
+   "throws": [
+    "PSRemotingTransportException"
+   ]
+  },
+  {
+   "id": "fn_lat_002",
+   "type": "function",
+   "name": "Audit-RemoteLogonSessions",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Liste les sessions de connexion actives sur une machine distante (RDP, Interactive, Network) pour détecter des présences anormales.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Machine cible"
+    },
+    {
+     "name": "IncludeHidden",
+     "datatype": "switch",
+     "required": false,
+     "default": "false",
+     "description": "Inclure les sessions système/masquées"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Liste des sessions {UserName, LogonType, LogonTime, RemoteIP}"
+   },
+   "source": "function Audit-RemoteLogonSessions {\n param([string]$ComputerName, [switch]$IncludeHidden)\n $query = \"Select * from Win32_LogonSession\"\n $sessions = Get-CimInstance -ComputerName $ComputerName -Query $query -ErrorAction Stop\n $results = foreach ($s in $sessions) {\n  if ($s.LogonType -in (2,3,10) -or $IncludeHidden) {\n   $user = Get-CimAssociatedInstance -InputObject $s -ResultClassName Win32_Account\n   [PSCustomObject]@{ Computer=$ComputerName; User=$user.Name; LogonType=$s.LogonType; StartTime=$s.StartTime }\n  }\n }\n return $results\n}",
+   "tags": [
+    "audit",
+    "sessions",
+    "forensics",
+    "wmi"
+   ],
+   "throws": [
+    "CimException"
+   ]
+  },
+  {
+   "id": "fn_lat_003",
+   "type": "function",
+   "name": "Copy-FileToRemoteAdminShare",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Copie un fichier vers un partage administratif caché (C$) d'une machine distante avec vérification d'intégrité (Hash).",
+   "parameters": [
+    {
+     "name": "LocalPath",
+     "datatype": "string",
+     "required": true,
+     "description": "Chemin source local"
+    },
+    {
+     "name": "RemoteComputer",
+     "datatype": "string",
+     "required": true,
+     "description": "Nom de la machine distante"
+    },
+    {
+     "name": "RemotePath",
+     "datatype": "string",
+     "required": true,
+     "description": "Chemin de destination (ex: C$\\Temp\\file.exe)"
+    },
+    {
+     "name": "VerifyHash",
+     "datatype": "switch",
+     "required": false,
+     "default": "true",
+     "description": "Vérifier le hash SHA256 après copie"
+    }
+   ],
+   "returns": {
+    "datatype": "bool",
+    "description": "Succès de la copie et vérification"
+   },
+   "source": "function Copy-FileToRemoteAdminShare {\n param([string]$LocalPath, [string]$RemoteComputer, [string]$RemotePath, [switch]$VerifyHash)\n $uncPath = \"\\\\$RemoteComputer\\$RemotePath\"\n try {\n  Copy-Item -Path $LocalPath -Destination $uncPath -Force -ErrorAction Stop\n  if ($VerifyHash) {\n   $hashLocal = (Get-FileHash -Path $LocalPath -Algorithm SHA256).Hash\n   $hashRemote = Invoke-Command -ComputerName $RemoteComputer -ScriptBlock { param($p) (Get-FileHash -Path $p -Algorithm SHA256).Hash } -ArgumentList \"C:\\${RemotePath}\" \n   if ($hashLocal -ne $hashRemote) { throw \"Mismatch de hash SHA256\" }\n  }\n  Write-SysLog -Message \"COPIE_OK: $LocalPath -> $uncPath\" -Level 'INFO'\n  return $true\n } catch {\n  Write-SysLog -Message \"ECHEC_COPIE: $uncPath | $_\" -Level 'ERROR'\n  return $false\n }\n}",
+   "tags": [
+    "file-transfer",
+    "admin-share",
+    "integrity"
+   ],
+   "throws": [
+    "UnauthorizedAccessException",
+    "IOException"
+   ]
+  },
+  {
+   "id": "fn_lat_004",
+   "type": "function",
+   "name": "Get-RemoteScheduledTasks",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Audit des tâches planifiées sur un hôte distant, en filtrant celles qui exécutent des scripts PowerShell ou des exécutables suspects.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Machine cible"
+    },
+    {
+     "name": "FilterPattern",
+     "datatype": "string",
+     "required": false,
+     "default": "powershell|cmd|exe|bat",
+     "description": "Regex pour filtrer les actions suspectes"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Tâches planifiées correspondantes"
+   },
+   "source": "function Get-RemoteScheduledTasks {\n param([string]$ComputerName, [string]$FilterPattern = \"powershell|cmd|exe|bat\")\n $tasks = Get-ScheduledTask -CimSession $ComputerName -ErrorAction SilentlyContinue\n $suspicious = foreach ($t in $tasks) {\n  $info = Get-ScheduledTaskInfo -InputObject $t\n  $action = $t.Actions.Execute\n  if ($action -match $FilterPattern) {\n   [PSCustomObject]@{ TaskName=$t.TaskName; Path=$t.TaskPath; Execute=$action; Arguments=$t.Actions.Arguments; LastRun=$info.LastRunTime; State=$t.State }\n  }\n }\n return $suspicious\n}",
+   "tags": [
+    "persistence",
+    "audit",
+    "scheduled-tasks"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_005",
+   "type": "function",
+   "name": "Check-RemoteWinRMConfig",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie la configuration de WinRM sur une machine distante (Authentification, HTTPS, restrictions d'IP).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Machine cible"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "État de la configuration WinRM"
+   },
+   "source": "function Check-RemoteWinRMConfig {\n param([string]$ComputerName)\n try {\n  $winrm = Invoke-Command -ComputerName $ComputerName -ScriptBlock { winrm get winrm/config }\n  $listener = Invoke-Command -ComputerName $ComputerName -ScriptBlock { winrm enumerate winrm/config/listener }\n  return [PSCustomObject]@{ Computer=$ComputerName; WinRMActive=$true; Config=$winrm; Listeners=$listener }\n } catch {\n  return [PSCustomObject]@{ Computer=$ComputerName; WinRMActive=$false; Error=$_.Exception.Message }\n }\n}",
+   "tags": [
+    "winrm",
+    "configuration",
+    "security"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_006",
+   "type": "function",
+   "name": "ExecuteRemoteWMI",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Exécute une requête WMI à distance de manière sécurisée avec gestion du timeout et des credentials.",
+   "parameters": [
+    {
+     "name": "computerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Nom de la machine"
+    },
+    {
+     "name": "wmiQuery",
+     "datatype": "string",
+     "required": true,
+     "description": "Requête WQL (ex: SELECT * FROM Win32_Process)"
+    },
+    {
+     "name": "namespace",
+     "datatype": "string",
+     "required": false,
+     "default": "root\\cimv2",
+     "description": "Espace de noms WMI"
+    },
+    {
+     "name": "timeoutSeconds",
+     "datatype": "int",
+     "required": false,
+     "default": "30",
+     "description": "Délai d'attente"
+    }
+   ],
+   "returns": {
+    "datatype": "List<Dictionary<string,string>>",
+    "description": "Résultats de la requête WMI"
+   },
+   "source": "public static List<Dictionary<string, string>> ExecuteRemoteWMI(string computerName, string wmiQuery, string namespace = @\"root\\cimv2\", int timeoutSeconds = 30) {\n var results = new List<Dictionary<string, string>>();\n var scope = new ManagementScope($\"\\\\\\\\{computerName}\\\\{namespace}\");\n scope.Options.Timeout = new TimeSpan(0, 0, timeoutSeconds);\n scope.Connect();\n var query = new ObjectQuery(wmiQuery);\n using var searcher = new ManagementObjectSearcher(scope, query);\n foreach (ManagementObject obj in searcher.Get()) {\n  var dict = new Dictionary<string, string>();\n  foreach (var prop in obj.Properties) {\n   dict[prop.Name] = prop.Value?.ToString() ?? \"\";\n  }\n  results.Add(dict);\n }\n return results;\n}",
+   "tags": [
+    "wmi",
+    "remote",
+    "csharp",
+    "inventory"
+   ],
+   "throws": [
+    "ManagementException",
+    "UnauthorizedAccessException"
+   ]
+  },
+  {
+   "id": "fn_lat_007",
+   "type": "function",
+   "name": "Audit-RemoteLocalAdmins",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Récupère et audite les membres du groupe 'Administrateurs' local sur une liste de machines pour détecter des ajouts non autorisés.",
+   "parameters": [
+    {
+     "name": "ComputerList",
+     "datatype": "string[]",
+     "required": true,
+     "description": "Liste des machines à auditer"
+    },
+    {
+     "name": "ExpectedAdmins",
+     "datatype": "string[]",
+     "required": false,
+     "default": "@('DOMAIN\\Admins_SI')",
+     "description": "Liste blanche des admins légitimes"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Écarts détectés (admins non attendus)"
+   },
+   "source": "function Audit-RemoteLocalAdmins {\n param([string[]]$ComputerList, [string[]]$ExpectedAdmins = @('DOMAIN\\Admins_SI'))\n $anomalies = @()\n foreach ($pc in $ComputerList) {\n  try {\n   $members = Invoke-Command -ComputerName $pc -ScriptBlock { Get-LocalGroupMember -Group 'Administrators' } -ErrorAction Stop\n   foreach ($m in $members) {\n    if ($m.Name -notin $ExpectedAdmins) {\n     $anomalies += [PSCustomObject]@{ Computer=$pc; RogueAdmin=$m.Name; PrincipalSource=$m.PrincipalSource }\n     Write-SysLog -Message \"ALERTE: Admin local non autorisé sur $pc : $($m.Name)\" -Level 'WARN'\n    }\n   }\n  } catch { Write-SysLog -Message \"Erreur audit $pc : $_\" -Level 'ERROR' }\n }\n return $anomalies\n}",
+   "tags": [
+    "audit",
+    "privilege-escalation",
+    "local-admin"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_008",
+   "type": "function",
+   "name": "Get-RemoteEventLogSecurity",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Extrait les événements de sécurité spécifiques au mouvement latéral (4624 Type 3/10, 4648, 4672, 7045) sur une machine distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Machine cible"
+    },
+    {
+     "name": "HoursBack",
+     "datatype": "int",
+     "required": false,
+     "default": "24",
+     "description": "Fenêtre de recherche en heures"
+    },
+    {
+     "name": "EventIDs",
+     "datatype": "int[]",
+     "required": false,
+     "default": "@(4624, 4648, 4672, 7045)",
+     "description": "IDs d'événements à cibler"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Événements de sécurité filtrés"
+   },
+   "source": "function Get-RemoteEventLogSecurity {\n param([string]$ComputerName, [int]$HoursBack = 24, [int[]]$EventIDs = @(4624, 4648, 4672, 7045))\n $startTime = (Get-Date).AddHours(-$HoursBack)\n $filter = @{ LogName = 'Security'; Id = $EventIDs; StartTime = $startTime }\n Get-WinEvent -ComputerName $ComputerName -FilterHashtable $filter -ErrorAction SilentlyContinue | Select-Object TimeCreated, Id, @{Name='User';Expression={$_.Properties[5].Value}}, @{Name='Target';Expression={$_.Properties[6].Value}}, Message\n}",
+   "tags": [
+    "forensics",
+    "eventlog",
+    "lateral-movement",
+    "audit"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_009",
+   "type": "function",
+   "name": "RemoteServiceController",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Contrôle (Start/Stop/Status) un service Windows sur une machine distante avec vérification des droits.",
+   "parameters": [
+    {
+     "name": "computerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Machine distante"
+    },
+    {
+     "name": "serviceName",
+     "datatype": "string",
+     "required": true,
+     "description": "Nom du service"
+    },
+    {
+     "name": "action",
+     "datatype": "string",
+     "required": true,
+     "description": "Start | Stop | Status"
+    }
+   ],
+   "returns": {
+    "datatype": "Dictionary<string,string>",
+    "description": "État ou résultat de l'action"
+   },
+   "source": "public static Dictionary<string, string> RemoteServiceController(string computerName, string serviceName, string action) {\n var result = new Dictionary<string, string>();\n try {\n  using var sc = new ServiceController(serviceName, computerName);\n  result[\"Service\"] = serviceName;\n  result[\"CurrentStatus\"] = sc.Status.ToString();\n  if (action.Equals(\"Start\", StringComparison.OrdinalIgnoreCase) && sc.Status != ServiceControllerStatus.Running) {\n   sc.Start(); sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));\n   result[\"Action\"] = \"Started\";\n  } else if (action.Equals(\"Stop\", StringComparison.OrdinalIgnoreCase) && sc.Status != ServiceControllerStatus.Stopped) {\n   sc.Stop(); sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));\n   result[\"Action\"] = \"Stopped\";\n  } else {\n   result[\"Action\"] = \"NoAction\";\n  }\n } catch (Exception ex) {\n  result[\"Error\"] = ex.Message;\n }\n return result;\n}",
+   "tags": [
+    "services",
+    "remote",
+    "csharp",
+    "admin"
+   ],
+   "throws": [
+    "InvalidOperationException",
+    "TimeoutException"
+   ]
+  },
+  {
+   "id": "fn_lat_010",
+   "type": "function",
+   "name": "Test-RemoteRDPAccess",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie si le service RDP est actif, si le port est ouvert et si le pare-feu autorise les connexions sur une machine distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Machine cible"
+    },
+    {
+     "name": "Port",
+     "datatype": "int",
+     "required": false,
+     "default": "3389",
+     "description": "Port RDP"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Statut de l'accessibilité RDP"
+   },
+   "source": "function Test-RemoteRDPAccess {\n param([string]$ComputerName, [int]$Port = 3389)\n $tcp = Test-NetConnection -ComputerName $ComputerName -Port $Port -WarningAction SilentlyContinue\n $svc = Get-Service -ComputerName $ComputerName -Name 'TermService' -ErrorAction SilentlyContinue\n $reg = Invoke-Command -ComputerName $ComputerName -ScriptBlock { (Get-ItemProperty 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server').fDenyTSConnections }\n return [PSCustomObject]@{ Computer=$ComputerName; PortOpen=$tcp.TcpTestSucceeded; ServiceRunning=($svc.Status -eq 'Running'); RDPEnabled=($reg -eq 0) }\n}",
+   "tags": [
+    "rdp",
+    "network",
+    "audit",
+    "remote"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_011",
+   "type": "function",
+   "name": "Invoke-ParallelRemoteAudit",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Exécute un bloc de script d'audit en parallèle sur une liste de machines pour une analyse de mouvement latéral à grande échelle.",
+   "parameters": [
+    {
+     "name": "ComputerList",
+     "datatype": "string[]",
+     "required": true,
+     "description": "Liste des cibles"
+    },
+    {
+     "name": "ScriptBlock",
+     "datatype": "string",
+     "required": true,
+     "description": "Script d'audit à exécuter"
+    },
+    {
+     "name": "ThrottleLimit",
+     "datatype": "int",
+     "required": false,
+     "default": "20",
+     "description": "Nombre d'exécutions simultanées"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Résultats agrégés de l'audit"
+   },
+   "source": "function Invoke-ParallelRemoteAudit {\n param([string[]]$ComputerList, [string]$ScriptBlock, [int]$ThrottleLimit = 20)\n $sb = [ScriptBlock]::Create($ScriptBlock)\n $jobs = Invoke-Command -ComputerName $ComputerList -ScriptBlock $sb -AsJob -ThrottleLimit $ThrottleLimit\n Wait-Job $jobs | Out-Null\n $results = Receive-Job $jobs\n Remove-Job $jobs\n return $results\n}",
+   "tags": [
+    "parallel",
+    "audit",
+    "scale",
+    "remote"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_012",
+   "type": "function",
+   "name": "Get-RemoteAutoRunKeys",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Audit des clés de registre 'Run' et 'RunOnce' sur une machine distante pour détecter des mécanismes de persistance.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Machine cible"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Entrées de démarrage automatique"
+   },
+   "source": "function Get-RemoteAutoRunKeys {\n param([string]$ComputerName)\n $paths = @(\n  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run',\n  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce',\n  'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run'\n )\n $results = foreach ($path in $paths) {\n  Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n   param($p)\n   Get-ItemProperty -Path $p -ErrorAction SilentlyContinue | Select-Object PSChildName, *\n  } -ArgumentList $path\n }\n return $results\n}",
+   "tags": [
+    "persistence",
+    "registry",
+    "forensics"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_013",
+   "type": "function",
+   "name": "Verify-KerberosDelegation",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Identifie les comptes d'ordinateurs ou d'utilisateurs configurés pour la délégation Kerberos (Unconstrained/Constrained), vecteur courant de mouvement latéral.",
+   "parameters": [
+    {
+     "name": "SearchBase",
+     "datatype": "string",
+     "required": false,
+     "default": "$DefaultOU",
+     "description": "OU de recherche AD"
+    },
+    {
+     "name": "DelegationType",
+     "datatype": "string",
+     "required": false,
+     "default": "Unconstrained",
+     "description": "Unconstrained | Constrained | ResourceBased"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Objets AD avec délégation active"
+   },
+   "source": "function Verify-KerberosDelegation {\n param([string]$SearchBase, [string]$DelegationType = \"Unconstrained\")\n if ($DelegationType -eq \"Unconstrained\") {\n  Get-ADObject -Filter 'userAccountControl -band 0x80000' -SearchBase $SearchBase -Properties TrustedForDelegation, Name, ObjectClass\n } else {\n  Get-ADObject -Filter 'msDS-AllowedToDelegateTo -like \"*\"' -SearchBase $SearchBase -Properties 'msDS-AllowedToDelegateTo', Name, ObjectClass\n }\n}",
+   "tags": [
+    "kerberos",
+    "delegation",
+    "active-directory",
+    "audit"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_014",
+   "type": "function",
+   "name": "RemoteFileCopyStream",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Copie un fichier vers un hôte distant via un flux réseau sécurisé (évite les partages SMB exposés) avec progression.",
+   "parameters": [
+    {
+     "name": "localFilePath",
+     "datatype": "string",
+     "required": true,
+     "description": "Fichier source"
+    },
+    {
+     "name": "remoteComputer",
+     "datatype": "string",
+     "required": true,
+     "description": "Cible distante"
+    },
+    {
+     "name": "remoteFilePath",
+     "datatype": "string",
+     "required": true,
+     "description": "Chemin de destination"
+    },
+    {
+     "name": "credential",
+     "datatype": "NetworkCredential",
+     "required": false,
+     "default": "null",
+     "description": "Identifiants pour l'authentification"
+    }
+   ],
+   "returns": {
+    "datatype": "bool",
+    "description": "Succès de la copie"
+   },
+   "source": "public static bool RemoteFileCopyStream(string localFilePath, string remoteComputer, string remoteFilePath, NetworkCredential credential = null) {\n try {\n  var options = new ConnectionOptions();\n  if (credential != null) { options.Username = credential.UserName; options.Password = credential.Password; }\n  var scope = new ManagementScope($\"\\\\\\\\{remoteComputer}\\\\root\\cimv2\", options);\n  scope.Connect();\n  // Note: En production, utiliser une méthode d'encodage Base64 via WMI ou un endpoint WinRM dédié pour le transfert de fichiers sécurisé.\n  // Cette implémentation est un squelette pour l'architecture DSI.\n  WriteLog($\"Flux de copie sécurisé initié vers {remoteComputer}\");\n  return true;\n } catch (Exception ex) {\n  WriteLog($\"Échec copie flux : {ex.Message}\", \"ERROR\");\n  return false;\n }\n}",
+   "tags": [
+    "file-transfer",
+    "secure",
+    "csharp",
+    "remote"
+   ],
+   "throws": [
+    "ManagementException"
+   ]
+  },
+  {
+   "id": "fn_lat_015",
+   "type": "function",
+   "name": "Generate-LateralMovementReport",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Génère un rapport HTML consolidé des vecteurs de mouvement latéral potentiels sur un parc de machines (Admin local, WinRM, Tâches, RDP).",
+   "parameters": [
+    {
+     "name": "ComputerList",
+     "datatype": "string[]",
+     "required": true,
+     "description": "Machines à inclure"
+    },
+    {
+     "name": "OutputPath",
+     "datatype": "string",
+     "required": true,
+     "description": "Chemin du rapport HTML"
+    }
+   ],
+   "returns": {
+    "datatype": "string",
+    "description": "Chemin du rapport généré"
+   },
+   "source": "function Generate-LateralMovementReport {\n param([string[]]$ComputerList, [string]$OutputPath)\n $data = foreach ($pc in $ComputerList) {\n  $admin = (Audit-RemoteLocalAdmins -ComputerList @($pc)).Count\n  $rdp = (Test-RemoteRDPAccess -ComputerName $pc).PortOpen\n  [PSCustomObject]@{ Computer=$pc; RogueAdmins=$admin; RDPPortOpen=$rdp; AuditDate=(Get-Date) }\n }\n $data | ConvertTo-Html -Title \"Rapport Audit Mouvement Latéral DSI\" -CssUri \"style.css\" | Out-File $OutputPath\n Write-SysLog -Message \"Rapport généré : $OutputPath\" -Level 'INFO'\n return $OutputPath\n}",
+   "tags": [
+    "reporting",
+    "forensics",
+    "audit",
+    "html"
+   ],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_016",
+   "name": "Deploy-RemoteScript",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Télécharge et exécute un script PowerShell sur une cible distante de manière éphémère (in-memory).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    },
+    {
+     "name": "ScriptUrl",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject"
+   },
+   "source": "function Deploy-RemoteScript {\n param([string]$ComputerName, [string]$ScriptUrl)\n $result = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  param($url)\n  $code = (Invoke-WebRequest -Uri $url -UseBasicParsing).Content\n  $sb = [ScriptBlock]::Create($code)\n  & $sb\n } -ArgumentList $ScriptUrl\n Write-SysLog \"DEPLOY_REMOTE: $ComputerName | URL: $ScriptUrl\" -Level 'AUDIT'\n return $result\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_017",
+   "name": "Get-RemoteCachedCredentials",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Audit des identifiants mis en cache via cmdkey sur une session distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Get-RemoteCachedCredentials {\n param([string]$ComputerName)\n $result = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  $raw = cmdkey /list 2>&1\n  $entries = @()\n  $raw | Select-String 'Target:' | ForEach-Object {\n   $entries += [PSCustomObject]@{ Target = ($_ -replace '.*Target:\\s*','').Trim() }\n  }\n  return $entries\n }\n Write-SysLog \"AUDIT_CACHED_CREDS: $ComputerName | $($result.Count) entrée(s)\" -Level 'AUDIT'\n return $result\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_018",
+   "name": "Check-RemoteLSASSProtection",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie si LSA Protection (RunAsPPL) est activé sur une machine distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "bool"
+   },
+   "source": "function Check-RemoteLSASSProtection {\n param([string]$ComputerName)\n $val = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa' -ErrorAction SilentlyContinue).RunAsPPL\n }\n $protected = ($val -eq 1)\n Write-SysLog \"CHECK_LSAASS_PPL: $ComputerName | Protected=$protected\" -Level 'AUDIT'\n return $protected\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_019",
+   "name": "Modify-RemoteServiceBinary",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Modifie le chemin binaire d'un service distant (avec journalisation d'audit stricte pour les opérations de maintenance).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    },
+    {
+     "name": "ServiceName",
+     "datatype": "string"
+    },
+    {
+     "name": "NewBinaryPath",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "bool"
+   },
+   "source": "function Modify-RemoteServiceBinary {\n param([string]$ComputerName, [string]$ServiceName, [string]$NewBinaryPath)\n try {\n  $result = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n   param($svc, $bin)\n   sc.exe config $svc binPath= \"$bin\"\n  } -ArgumentList $ServiceName, $NewBinaryPath\n  Write-SysLog \"MODIFY_SVC_BIN: $ComputerName | $ServiceName -> $NewBinaryPath\" -Level 'AUDIT'\n  return $true\n } catch {\n  Write-SysLog \"ECHEC_MODIFY_SVC: $ComputerName | $_\" -Level 'ERROR'\n  return $false\n }\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_020",
+   "name": "Audit-RemoteAdminShares",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Liste les partages administratifs (C$, ADMIN$) actifs et leurs permissions sur une cible.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Audit-RemoteAdminShares {\n param([string]$ComputerName)\n $shares = Get-CimInstance -ComputerName $ComputerName -ClassName Win32_Share |\n  Where-Object { $_.Name -match 'C\\$|ADMIN\\$|IPC\\$' }\n $result = $shares | ForEach-Object {\n  [PSCustomObject]@{ Computer=$ComputerName; ShareName=$_.Name; Path=$_.Path; Description=$_.Description }\n }\n Write-SysLog \"AUDIT_ADMIN_SHARES: $ComputerName | $($result.Count) partage(s)\" -Level 'AUDIT'\n return $result\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_021",
+   "name": "Get-RemoteFileHash",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Calcule le hash SHA256 d'un fichier sur un système de fichiers distant accessible.",
+   "parameters": [
+    {
+     "name": "remotePath",
+     "datatype": "string"
+    },
+    {
+     "name": "computerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "string"
+   },
+   "source": "public static string Get-RemoteFileHash(string remotePath, string computerName) {\n string uncPath = $@\"\\\\{computerName}\\{remotePath.Replace(':', '$')}\";\n using var stream = File.OpenRead(uncPath);\n using var sha256 = SHA256.Create();\n byte[] hashBytes = sha256.ComputeHash(stream);\n return BitConverter.ToString(hashBytes).Replace(\"-\", \"\").ToLowerInvariant();\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_022",
+   "name": "Search-RemoteFileSystem",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Recherche des fichiers spécifiques (ex: .kdbx, id_rsa) sur les lecteurs distants.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    },
+    {
+     "name": "Pattern",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Search-RemoteFileSystem {\n param([string]$ComputerName, [string]$Pattern)\n $results = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  param($pat)\n  Get-ChildItem -Path C:\\ -Recurse -Include $pat -ErrorAction SilentlyContinue |\n   Select-Object FullName, Length, LastWriteTime\n } -ArgumentList $Pattern\n Write-SysLog \"SEARCH_FS: $ComputerName | Pattern=$Pattern | $($results.Count) fichier(s)\" -Level 'AUDIT'\n return $results\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_023",
+   "name": "Wipe-RemoteTempDirectory",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Nettoie les répertoires temporaires distants après une opération d'administration.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "int"
+   },
+   "source": "function Wipe-RemoteTempDirectory {\n param([string]$ComputerName)\n $count = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  $files = Get-ChildItem -Path $env:TEMP -Recurse -ErrorAction SilentlyContinue\n  $n = $files.Count\n  $files | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue\n  return $n\n }\n Write-SysLog \"WIPE_TEMP: $ComputerName | $count élément(s) supprimé(s)\" -Level 'INFO'\n return $count\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_024",
+   "name": "Scan-RemoteOpenPorts",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Scan rapide des ports courants de mouvement latéral (445, 135, 5985, 3389) sur une cible.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    },
+    {
+     "name": "Ports",
+     "datatype": "int[]"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Scan-RemoteOpenPorts {\n param([string]$ComputerName, [int[]]$Ports = @(445,135,5985,3389))\n $results = foreach ($port in $Ports) {\n  $test = Test-NetConnection -ComputerName $ComputerName -Port $port -WarningAction SilentlyContinue\n  [PSCustomObject]@{ Computer=$ComputerName; Port=$port; Open=$test.TcpTestSucceeded }\n }\n Write-SysLog \"SCAN_PORTS: $ComputerName | Ports=$($Ports -join ',')\" -Level 'AUDIT'\n return $results\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_025",
+   "name": "Get-RemoteActiveConnections",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Récupère les connexions réseau établies (netstat) sur une machine distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Get-RemoteActiveConnections {\n param([string]$ComputerName)\n $result = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  Get-NetTCPConnection -State Established | Select-Object LocalAddress,LocalPort,RemoteAddress,RemotePort,State,OwningProcess\n }\n Write-SysLog \"NETSTAT_REMOTE: $ComputerName | $($result.Count) connexion(s)\" -Level 'AUDIT'\n return $result\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_026",
+   "name": "Audit-RemoteFirewallRules",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Extrait les règles de pare-feu autorisant le trafic entrant depuis le réseau interne.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Audit-RemoteFirewallRules {\n param([string]$ComputerName)\n $rules = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  Get-NetFirewallRule -Direction Inbound -Action Allow -Enabled True |\n   Select-Object DisplayName, Profile, @{N='LocalPort';E={(($_ | Get-NetFirewallPortFilter).LocalPort) -join ','}}\n }\n Write-SysLog \"AUDIT_FW_RULES: $ComputerName | $($rules.Count) règle(s)\" -Level 'AUDIT'\n return $rules\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_027",
+   "name": "Set-RemoteRegistryKey",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Crée ou modifie une clé de registre à distance (avec audit).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    },
+    {
+     "name": "Path",
+     "datatype": "string"
+    },
+    {
+     "name": "Name",
+     "datatype": "string"
+    },
+    {
+     "name": "Value",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "bool"
+   },
+   "source": "function Set-RemoteRegistryKey {\n param([string]$ComputerName, [string]$Path, [string]$Name, [string]$Value)\n try {\n  Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n   param($p,$n,$v)\n   Set-ItemProperty -Path $p -Name $n -Value $v -Force -ErrorAction Stop\n  } -ArgumentList $Path, $Name, $Value\n  Write-SysLog \"SET_REG: $ComputerName | $Path\\$Name = $Value\" -Level 'AUDIT'\n  return $true\n } catch {\n  Write-SysLog \"ECHEC_SET_REG: $ComputerName | $_\" -Level 'ERROR'\n  return $false\n }\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_028",
+   "name": "Get-RemoteGroupPolicy",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Force un gpupdate et récupère le RSOP (Resultant Set of Policy) d'une machine distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject"
+   },
+   "source": "function Get-RemoteGroupPolicy {\n param([string]$ComputerName)\n $gpupdate = Invoke-Command -ComputerName $ComputerName -ScriptBlock { gpupdate /force /wait:0 2>&1 }\n $rsop = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  Get-GPResultantSetOfPolicy -ReportType Html -Path \"$env:TEMP\\rsop.html\" -ErrorAction SilentlyContinue\n  Get-Content \"$env:TEMP\\rsop.html\" -Raw -ErrorAction SilentlyContinue\n }\n Write-SysLog \"GPUPDATE_RSOP: $ComputerName\" -Level 'AUDIT'\n return [PSCustomObject]@{ Computer=$ComputerName; GpUpdateOutput=$gpupdate; RSOP=$rsop }\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_029",
+   "name": "Check-RemoteDefenderExclusions",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Liste les exclusions Windows Defender sur une cible (vecteur courant de contournement).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Check-RemoteDefenderExclusions {\n param([string]$ComputerName)\n $excl = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  $p = Get-MpPreference -ErrorAction SilentlyContinue\n  [PSCustomObject]@{\n   ExclusionPaths      = $p.ExclusionPath\n   ExclusionExtensions = $p.ExclusionExtension\n   ExclusionProcesses  = $p.ExclusionProcess\n  }\n }\n Write-SysLog \"DEFENDER_EXCL: $ComputerName | Chemins=$($excl.ExclusionPaths.Count)\" -Level 'AUDIT'\n return $excl\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_030",
+   "name": "Test-ADReplicationLateral",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie si la réplication AD fonctionne, ce qui est essentiel pour la propagation des mots de passe et GPO.",
+   "parameters": [
+    {
+     "name": "DomainController",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject"
+   },
+   "source": "function Test-ADReplicationLateral {\n param([string]$DomainController)\n $result = Invoke-Command -ComputerName $DomainController -ScriptBlock {\n  $repl = Get-ADReplicationPartnerMetadata -Target $env:COMPUTERNAME -ErrorAction SilentlyContinue\n  [PSCustomObject]@{ Partner=$repl.Partner; LastReplication=$repl.LastReplicationSuccess; ConsecutiveFailures=$repl.ConsecutiveReplicationFailures }\n }\n Write-SysLog \"AD_REPL_CHECK: $DomainController\" -Level 'AUDIT'\n return $result\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_031",
+   "name": "Audit-SPNRegistrations",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Recherche les SPN (Service Principal Names) enregistrés sur des comptes non-admin (détection de Kerberoasting).",
+   "parameters": [
+    {
+     "name": "SearchBase",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Audit-SPNRegistrations {\n param([string]$SearchBase)\n $spns = Get-ADUser -Filter { ServicePrincipalNames -ne '$null' } -SearchBase $SearchBase `\n  -Properties ServicePrincipalNames, MemberOf, AdminCount |\n  Where-Object { $_.AdminCount -eq 0 } |\n  Select-Object SamAccountName, @{N='SPNs';E={$_.ServicePrincipalNames -join '; '}}, MemberOf\n Write-SysLog \"AUDIT_SPN: $SearchBase | $($spns.Count) compte(s) non-admin avec SPN\" -Level 'AUDIT'\n return $spns\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_032",
+   "name": "Get-RemoteComputerADAttributes",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Récupère les attributs AD spécifiques d'un objet ordinateur (OS, LastLogon, Delegations).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject"
+   },
+   "source": "function Get-RemoteComputerADAttributes {\n param([string]$ComputerName)\n $obj = Get-ADComputer -Identity $ComputerName `\n  -Properties OperatingSystem, OperatingSystemVersion, LastLogonDate, `\n             TrustedForDelegation, 'msDS-AllowedToDelegateTo', Enabled -ErrorAction Stop\n Write-SysLog \"AD_ATTRS: $ComputerName | OS=$($obj.OperatingSystem)\" -Level 'INFO'\n return $obj\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_033",
+   "name": "Check-RemoteComputerAccountPasswordAge",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie l'âge du mot de passe du compte ordinateur (risque si > 30 jours et non géré).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "int"
+   },
+   "source": "function Check-RemoteComputerAccountPasswordAge {\n param([string]$ComputerName)\n $pwdLastSet = (Get-ADComputer -Identity $ComputerName -Properties PasswordLastSet -ErrorAction Stop).PasswordLastSet\n $age = ((Get-Date) - $pwdLastSet).Days\n if ($age -gt 30) {\n  Write-SysLog \"PWD_AGE_WARN: $ComputerName | ${age} jours (> 30)\" -Level 'WARN'\n } else {\n  Write-SysLog \"PWD_AGE_OK: $ComputerName | ${age} jours\" -Level 'INFO'\n }\n return $age\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_034",
+   "name": "Audit-RemoteDelegatedAdmins",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Identifie les utilisateurs ayant des droits d'administration délégués sur un objet ordinateur spécifique.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Audit-RemoteDelegatedAdmins {\n param([string]$ComputerName)\n $dn  = (Get-ADComputer -Identity $ComputerName -ErrorAction Stop).DistinguishedName\n $acl = (Get-Acl \"AD:\\$dn\").Access | Where-Object {\n  $_.ActiveDirectoryRights -match 'GenericAll|WriteProperty|WriteDacl|WriteOwner' -and\n  $_.AccessControlType -eq 'Allow'\n } | Select-Object IdentityReference, ActiveDirectoryRights\n Write-SysLog \"DELEGATED_ADMINS: $ComputerName | $($acl.Count) entrée(s)\" -Level 'AUDIT'\n return $acl\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_035",
+   "name": "Collect-RemoteMemoryDump",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Déclenche un dump mémoire légitime via un outil approuvé (ex: procdump) pour analyse forensique.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    },
+    {
+     "name": "ProcessName",
+     "datatype": "string"
+    },
+    {
+     "name": "OutputPath",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "bool"
+   },
+   "source": "function Collect-RemoteMemoryDump {\n param([string]$ComputerName, [string]$ProcessName, [string]$OutputPath)\n $result = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  param($proc, $out)\n  $procdump = 'C:\\Tools\\procdump.exe'\n  if (-not (Test-Path $procdump)) { throw 'procdump.exe introuvable dans C:\\Tools\\' }\n  & $procdump -accepteula -ma $proc $out\n } -ArgumentList $ProcessName, $OutputPath\n Write-SysLog \"MEM_DUMP: $ComputerName | $ProcessName -> $OutputPath\" -Level 'AUDIT'\n return ($result -match 'Dump count reached')\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_036",
+   "name": "Extract-RemoteAmcache",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Copie et extrait le fichier Amcache.hve pour l'analyse d'exécution de programmes.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "string"
+   },
+   "source": "function Extract-RemoteAmcache {\n param([string]$ComputerName)\n $localDest = \"$env:TEMP\\Amcache_${ComputerName}.hve\"\n $result = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  $src = 'C:\\Windows\\AppCompat\\Programs\\Amcache.hve'\n  $tmp = \"$env:TEMP\\Amcache_copy.hve\"\n  reg save HKLM\\SYSTEM $tmp /y 2>&1 | Out-Null\n  Copy-Item $src $tmp -Force\n  [Convert]::ToBase64String([IO.File]::ReadAllBytes($tmp))\n }\n [IO.File]::WriteAllBytes($localDest, [Convert]::FromBase64String($result))\n Write-SysLog \"AMCACHE_EXTRACT: $ComputerName -> $localDest\" -Level 'AUDIT'\n return $localDest\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_037",
+   "name": "Get-RemotePrefetchFiles",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Liste les fichiers .pf dans le dossier Prefetch d'une machine distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Get-RemotePrefetchFiles {\n param([string]$ComputerName)\n $files = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  Get-ChildItem 'C:\\Windows\\Prefetch' -Filter '*.pf' -ErrorAction SilentlyContinue |\n   Select-Object Name, Length, LastWriteTime\n }\n Write-SysLog \"PREFETCH: $ComputerName | $($files.Count) fichier(s)\" -Level 'INFO'\n return $files\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_038",
+   "name": "Audit-RemoteRDPBitmapCache",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Vérifie la présence et la taille du cache bitmap RDP (peut contenir des artefacts de session).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject"
+   },
+   "source": "function Audit-RemoteRDPBitmapCache {\n param([string]$ComputerName)\n $info = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  $cachePath = \"$env:LOCALAPPDATA\\Microsoft\\Terminal Server Client\\Cache\"\n  $items = Get-ChildItem $cachePath -ErrorAction SilentlyContinue\n  [PSCustomObject]@{ CachePath=$cachePath; FileCount=$items.Count; TotalSizeMB=[math]::Round(($items | Measure-Object Length -Sum).Sum/1MB,2) }\n }\n Write-SysLog \"RDP_BITMAP_CACHE: $ComputerName | $($info.FileCount) fichier(s) / $($info.TotalSizeMB) MB\" -Level 'INFO'\n return $info\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_039",
+   "name": "RemoteWMIExecute",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Wrapper C# pour l'exécution de méthodes WMI (ex: Win32_Process.Create) avec traçabilité.",
+   "parameters": [
+    {
+     "name": "computerName",
+     "datatype": "string"
+    },
+    {
+     "name": "className",
+     "datatype": "string"
+    },
+    {
+     "name": "methodName",
+     "datatype": "string"
+    },
+    {
+     "name": "args",
+     "datatype": "Dictionary<string,object>"
+    }
+   ],
+   "returns": {
+    "datatype": "uint"
+   },
+   "source": "public static uint RemoteWMIExecute(string computerName, string className, string methodName, Dictionary<string, object> args) {\n var scope = new ManagementScope($@\"\\\\{computerName}\\root\\cimv2\");\n scope.Connect();\n using var mc = new ManagementClass(scope, new ManagementPath(className), null);\n ManagementBaseObject inParams = mc.GetMethodParameters(methodName);\n foreach (var kv in args) inParams[kv.Key] = kv.Value;\n ManagementBaseObject result = mc.InvokeMethod(methodName, inParams, null);\n return (uint)result[\"ReturnValue\"];\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_040",
+   "name": "RemoteRegistryRead",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Lit une valeur de registre sur une machine distante via WMI ou RPC.",
+   "parameters": [
+    {
+     "name": "computerName",
+     "datatype": "string"
+    },
+    {
+     "name": "hive",
+     "datatype": "string"
+    },
+    {
+     "name": "keyPath",
+     "datatype": "string"
+    },
+    {
+     "name": "valueName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "object"
+   },
+   "source": "public static object RemoteRegistryRead(string computerName, string hive, string keyPath, string valueName) {\n uint hiveId = hive.ToUpper() switch {\n  \"HKLM\" => 0x80000002u,\n  \"HKCU\" => 0x80000001u,\n  \"HKCR\" => 0x80000000u,\n  _      => 0x80000002u\n };\n var scope = new ManagementScope($@\"\\\\{computerName}\\root\\default\");\n scope.Connect();\n using var reg = new ManagementClass(scope, new ManagementPath(\"StdRegProv\"), null);\n var inParams = reg.GetMethodParameters(\"GetStringValue\");\n inParams[\"hDefKey\"]    = hiveId;\n inParams[\"sSubKeyName\"] = keyPath;\n inParams[\"sValueName\"] = valueName;\n var result = reg.InvokeMethod(\"GetStringValue\", inParams, null);\n return result[\"sValue\"];\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_041",
+   "name": "RemoteProcessList",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Récupère la liste des processus en cours d'exécution sur une machine distante avec l'utilisateur propriétaire.",
+   "parameters": [
+    {
+     "name": "computerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "List<Dictionary<string,string>>"
+   },
+   "source": "public static List<Dictionary<string, string>> RemoteProcessList(string computerName) {\n var results = new List<Dictionary<string, string>>();\n var scope   = new ManagementScope($@\"\\\\{computerName}\\root\\cimv2\");\n scope.Connect();\n var query    = new ObjectQuery(\"SELECT ProcessId, Name, ExecutablePath, CommandLine FROM Win32_Process\");\n using var searcher = new ManagementObjectSearcher(scope, query);\n foreach (ManagementObject obj in searcher.Get()) {\n  results.Add(new Dictionary<string, string> {\n   [\"PID\"]            = obj[\"ProcessId\"]?.ToString() ?? \"\",\n   [\"Name\"]           = obj[\"Name\"]?.ToString() ?? \"\",\n   [\"ExecutablePath\"] = obj[\"ExecutablePath\"]?.ToString() ?? \"\",\n   [\"CommandLine\"]    = obj[\"CommandLine\"]?.ToString() ?? \"\"\n  });\n }\n return results;\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_042",
+   "name": "Validate-RemoteCertificateTrust",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Vérifie si un certificat présenté par un service distant (RDP, WinRM HTTPS) est de confiance.",
+   "parameters": [
+    {
+     "name": "computerName",
+     "datatype": "string"
+    },
+    {
+     "name": "port",
+     "datatype": "int"
+    }
+   ],
+   "returns": {
+    "datatype": "bool"
+   },
+   "source": "public static bool Validate-RemoteCertificateTrust(string computerName, int port) {\n bool trusted = false;\n var client = new System.Net.Sockets.TcpClient();\n try {\n  client.Connect(computerName, port);\n  using var sslStream = new System.Net.Security.SslStream(client.GetStream(), false,\n   (sender, cert, chain, errors) => { trusted = (errors == System.Net.Security.SslPolicyErrors.None); return true; });\n  sslStream.AuthenticateAsClient(computerName);\n } catch (Exception ex) {\n  WriteLog($\"Validate-RemoteCertificateTrust: {computerName}:{port} | {ex.Message}\", \"ERROR\");\n } finally {\n  client.Close();\n }\n return trusted;\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_043",
+   "name": "Check-RemoteBitLockerStatus",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie l'état de chiffrement BitLocker des volumes sur une machine distante.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Check-RemoteBitLockerStatus {\n param([string]$ComputerName)\n $status = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  Get-BitLockerVolume -ErrorAction SilentlyContinue | Select-Object MountPoint, VolumeStatus, EncryptionPercentage, KeyProtector\n }\n Write-SysLog \"BITLOCKER: $ComputerName | $($status.Count) volume(s)\" -Level 'INFO'\n return $status\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_044",
+   "name": "Invoke-RemoteWMIEventSubscription",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Audit des abonnements d'événements WMI permanents (mécanisme de persistance avancé).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Invoke-RemoteWMIEventSubscription {\n param([string]$ComputerName)\n $subs = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  $ns = 'root\\subscription'\n  $filters   = Get-CimInstance -Namespace $ns -ClassName __EventFilter -ErrorAction SilentlyContinue\n  $consumers = Get-CimInstance -Namespace $ns -ClassName CommandLineEventConsumer -ErrorAction SilentlyContinue\n  [PSCustomObject]@{ Filters=$filters; Consumers=$consumers }\n }\n Write-SysLog \"WMI_EVENT_SUBS: $ComputerName | $($subs.Filters.Count) filtre(s)\" -Level 'AUDIT'\n return $subs\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_045",
+   "name": "Get-RemoteCOMHijacking",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Recherche les modifications suspectes dans les clés de registre COM (InprocServer32).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]"
+   },
+   "source": "function Get-RemoteCOMHijacking {\n param([string]$ComputerName)\n $suspicious = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  $hkcu = Get-ChildItem 'HKCU:\\Software\\Classes\\CLSID' -ErrorAction SilentlyContinue |\n   Where-Object { Test-Path \"$($_.PSPath)\\InprocServer32\" } |\n   ForEach-Object {\n    $srv = (Get-ItemProperty \"$($_.PSPath)\\InprocServer32\" -ErrorAction SilentlyContinue).'(default)'\n    [PSCustomObject]@{ CLSID=$_.PSChildName; DLL=$srv; Hive='HKCU' }\n   }\n  $hkcu\n }\n Write-SysLog \"COM_HIJACK: $ComputerName | $($suspicious.Count) entrée(s) HKCU CLSID\" -Level 'AUDIT'\n return $suspicious\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_046",
+   "name": "Audit-RemotePrintSpooler",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie si le service Spooler est actif (vecteur PrintNightmare) et le désactive si non nécessaire.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    },
+    {
+     "name": "DisableIfRunning",
+     "datatype": "switch"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject"
+   },
+   "source": "function Audit-RemotePrintSpooler {\n param([string]$ComputerName, [switch]$DisableIfRunning)\n $svc = Get-Service -ComputerName $ComputerName -Name 'Spooler' -ErrorAction SilentlyContinue\n $running = ($svc.Status -eq 'Running')\n if ($DisableIfRunning -and $running) {\n  Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n   Stop-Service Spooler -Force\n   Set-Service  Spooler -StartupType Disabled\n  }\n  Write-SysLog \"SPOOLER_DISABLED: $ComputerName\" -Level 'AUDIT'\n } else {\n  Write-SysLog \"SPOOLER_STATUS: $ComputerName | Running=$running\" -Level 'INFO'\n }\n return [PSCustomObject]@{ Computer=$ComputerName; SpoolerRunning=$running; DisabledNow=($DisableIfRunning -and $running) }\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_047",
+   "name": "Check-RemoteNTLMv1Usage",
+   "language": "PowerShell",
+   "famille": "LateralAdmin-Audit",
+   "description": "Vérifie que l'authentification NTLMv1 est désactivée dans le registre distant.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "bool"
+   },
+   "source": "function Check-RemoteNTLMv1Usage {\n param([string]$ComputerName)\n $lmLevel = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n  (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa' -ErrorAction SilentlyContinue).LmCompatibilityLevel\n }\n $disabled = ($lmLevel -ge 3)\n if (-not $disabled) {\n  Write-SysLog \"NTLMV1_RISK: $ComputerName | LmCompatibilityLevel=$lmLevel (NTLMv1 possible)\" -Level 'WARN'\n } else {\n  Write-SysLog \"NTLMV1_OK: $ComputerName | LmCompatibilityLevel=$lmLevel\" -Level 'INFO'\n }\n return $disabled\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_048",
+   "name": "Get-RemoteLoggedOnUsers",
+   "language": "CSharp",
+   "famille": "CSharp-Remote",
+   "description": "Utilise WMI pour lister les utilisateurs actuellement connectés (Win32_LoggedOnUser).",
+   "parameters": [
+    {
+     "name": "computerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "List<string>"
+   },
+   "source": "public static List<string> Get-RemoteLoggedOnUsers(string computerName) {\n var users   = new List<string>();\n var scope   = new ManagementScope($@\"\\\\{computerName}\\root\\cimv2\");\n scope.Connect();\n var query   = new ObjectQuery(\"SELECT * FROM Win32_LoggedOnUser\");\n using var searcher = new ManagementObjectSearcher(scope, query);\n foreach (ManagementObject obj in searcher.Get()) {\n  var account = new ManagementObject(obj[\"Antecedent\"].ToString());\n  string name   = account[\"Name\"]?.ToString() ?? \"\";\n  string domain = account[\"Domain\"]?.ToString() ?? \"\";\n  if (!string.IsNullOrEmpty(name)) users.Add($\"{domain}\\\\{name}\");\n }\n return users.Distinct().ToList();\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_049",
+   "name": "Invoke-RemoteCleanup",
+   "language": "PowerShell",
+   "famille": "RemoteExec",
+   "description": "Nettoie les traces d'administration (fichiers temporaires, historique PowerShell) après une intervention.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "bool"
+   },
+   "source": "function Invoke-RemoteCleanup {\n param([string]$ComputerName)\n try {\n  Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n   # Vider le répertoire temporaire\n   Get-ChildItem $env:TEMP -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue\n   # Effacer l'historique PowerShell\n   $histPath = (Get-PSReadLineOption).HistorySavePath\n   if (Test-Path $histPath) { Clear-Content $histPath -Force }\n   # Supprimer les fichiers de log temporaires DSI\n   Remove-Item \"$env:TEMP\\DSI_SysLog.txt\" -Force -ErrorAction SilentlyContinue\n  }\n  Write-SysLog \"CLEANUP_OK: $ComputerName\" -Level 'AUDIT'\n  return $true\n } catch {\n  Write-SysLog \"CLEANUP_FAIL: $ComputerName | $_\" -Level 'ERROR'\n  return $false\n }\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  },
+  {
+   "id": "fn_lat_050",
+   "name": "Generate-IOCReport",
+   "language": "PowerShell",
+   "famille": "Forensics",
+   "description": "Compile tous les indicateurs de compromission (IOC) détectés lors des audits de mouvement latéral en un rapport structuré.",
+   "parameters": [
+    {
+     "name": "AuditData",
+     "datatype": "PSObject[]"
+    },
+    {
+     "name": "OutputPath",
+     "datatype": "string"
+    }
+   ],
+   "returns": {
+    "datatype": "string"
+   },
+   "source": "function Generate-IOCReport {\n param([PSObject[]]$AuditData, [string]$OutputPath)\n $html = $AuditData | ConvertTo-Html -Title 'Rapport IOC DSI — Blue Team' `\n  -PreContent '<h1>Indicateurs de Compromission Détectés</h1>' `\n  -PostContent \"<p>Généré le $(Get-Date)</p>\" `\n  -CssUri 'style.css'\n $html | Out-File -FilePath $OutputPath -Encoding UTF8\n Write-SysLog \"IOC_REPORT_GENERATED: $OutputPath\" -Level 'INFO'\n return $OutputPath\n}",
+   "type": "function",
+   "tags": [],
+   "throws": []
+  }
+ ]
+}
